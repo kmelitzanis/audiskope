@@ -1,0 +1,53 @@
+{
+  "name": "audiskope",
+  "version": "1.0.0",
+  "description": "Cross-platform Audio Visualizer with Spectrogram Analysis",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "audio",
+    "visualizer",
+    "spectrogram",
+    "electron",
+    "fft"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.audiskope.app",
+    "productName": "Audiskope",
+    "files": [
+      "**/*",
+      "!**/*.md",
+      "!.gitignore"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Audio"
+    }
+  }
+}
