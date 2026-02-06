@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audiskope - Audio Visualizer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Custom Title Bar -->
+  <div class="titlebar">
+    <div class="titlebar-drag-region">
+      <div class="titlebar-title">AUDISKOPE</div>
+    </div>
+    <div class="titlebar-buttons">
+      <button class="titlebar-button" id="minimize-btn">
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1"/>
+        </svg>
+      </button>
+      <button class="titlebar-button" id="maximize-btn">
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <rect x="0" y="0" width="10" height="10" stroke="currentColor" stroke-width="1" fill="none"/>
+        </svg>
+      </button>
+      <button class="titlebar-button close" id="close-btn">
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1"/>
+          <line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+      <div class="controls-section">
+        <button class="btn-primary" id="open-file-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 3h5l2 2h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+          </svg>
+          Open Audio File
+        </button>
+        <div class="file-info" id="file-info">
+          <div class="file-name">No file loaded</div>
+          <div class="file-duration" id="file-duration">--:--</div>
+        </div>
+      </div>
+      
+      <div class="controls-section">
+        <div class="control-group">
+          <label>FFT Size</label>
+          <select id="fft-size">
+            <option value="512">512</option>
+            <option value="1024">1024</option>
+            <option value="2048" selected>2048</option>
+            <option value="4096">4096</option>
+            <option value="8192">8192</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label>Window Size</label>
+          <select id="window-size">
+            <option value="128">128</option>
+            <option value="256">256</option>
+            <option value="512" selected>512</option>
+            <option value="1024">1024</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <div class="control-group">
+          <label>Color Scheme</label>
+          <select id="color-scheme">
+            <option value="fire">Fire</option>
+            <option value="ice">Ice</option>
+            <option value="mono">Mono</option>
+            <option value="serato" selected>Serato</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label>Intensity</label>
+          <input type="range" id="intensity" min="0" max="100" value="70" class="slider">
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualization Area -->
+    <div class="visualization-area">
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-content">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M32 8v48M8 32h48"/>
+            <circle cx="32" cy="32" r="24"/>
+          </svg>
+          <p>Drop audio file here or click "Open Audio File"</p>
+          <p class="supported-formats">Supported: MP3, WAV, FLAC, M4A, OGG, AAC</p>
+        </div>
+      </div>
+
+      <!-- Waveform Canvas -->
+      <div class="waveform-container" id="waveform-container" style="display: none;">
+        <canvas id="waveform-canvas"></canvas>
+      </div>
+
+      <!-- Spectrogram Canvas -->
+      <div class="spectrogram-container" id="spectrogram-container" style="display: none;">
+        <canvas id="spectrogram-canvas"></canvas>
+        <div class="frequency-labels">
+          <span>20 kHz</span>
+          <span>10 kHz</span>
+          <span>5 kHz</span>
+          <span>2 kHz</span>
+          <span>1 kHz</span>
+          <span>500 Hz</span>
+          <span>100 Hz</span>
+          <span>20 Hz</span>
+        </div>
+      </div>
+
+      <!-- Playback Controls -->
+      <div class="playback-controls" id="playback-controls" style="display: none;">
+        <button class="btn-play" id="play-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </button>
+        <div class="timeline">
+          <input type="range" id="timeline-slider" min="0" max="100" value="0" class="timeline-slider">
+          <div class="time-display">
+            <span id="current-time">0:00</span>
+            <span id="total-time">0:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
