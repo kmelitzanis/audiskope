@@ -1,7 +1,3 @@
-const { ipcRenderer } = require('electron');
-const fs = require('fs');
-const path = require('path');
-
 // Audio context and elements
 let audioContext;
 let audioBuffer;
@@ -68,7 +64,8 @@ function setupEventListeners() {
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      loadAudioFile(files[0].path);
+      const filePath = window.electronAPI.getFilePath(files[0]);
+      loadAudioFile(filePath);
     }
   });
 
@@ -106,20 +103,20 @@ function setupEventListeners() {
 
 function setupTitleBarButtons() {
   document.getElementById('minimize-btn').addEventListener('click', () => {
-    ipcRenderer.invoke('minimize-window');
+    window.electronAPI.minimizeWindow();
   });
 
   document.getElementById('maximize-btn').addEventListener('click', () => {
-    ipcRenderer.invoke('maximize-window');
+    window.electronAPI.maximizeWindow();
   });
 
   document.getElementById('close-btn').addEventListener('click', () => {
-    ipcRenderer.invoke('close-window');
+    window.electronAPI.closeWindow();
   });
 }
 
 async function openFileDialog() {
-  const filePath = await ipcRenderer.invoke('open-file-dialog');
+  const filePath = await window.electronAPI.openFileDialog();
   if (filePath) {
     loadAudioFile(filePath);
   }
@@ -127,8 +124,8 @@ async function openFileDialog() {
 
 async function loadAudioFile(filePath) {
   try {
-    // Read file
-    const arrayBuffer = fs.readFileSync(filePath);
+    // Read file through IPC
+    const fileData = await window.electronAPI.readFile(filePath);
     
     // Initialize audio context if needed
     if (!audioContext) {
@@ -136,11 +133,11 @@ async function loadAudioFile(filePath) {
     }
 
     // Decode audio
-    audioBuffer = await audioContext.decodeAudioData(arrayBuffer.buffer);
+    audioBuffer = await audioContext.decodeAudioData(fileData.buffer);
     currentFilePath = filePath;
 
     // Update UI
-    updateFileInfo(filePath, audioBuffer.duration);
+    updateFileInfo(fileData.name, audioBuffer.duration);
     showVisualization();
     updateVisualization();
     drawWaveform();
@@ -151,8 +148,7 @@ async function loadAudioFile(filePath) {
   }
 }
 
-function updateFileInfo(filePath, duration) {
-  const fileName = path.basename(filePath);
+function updateFileInfo(fileName, duration) {
   document.querySelector('.file-name').textContent = fileName;
   fileDuration.textContent = formatTime(duration);
   totalTimeDisplay.textContent = formatTime(duration);
