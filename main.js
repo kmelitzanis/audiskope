@@ -12,9 +12,9 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#1a1a1a',
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
     },
     titleBarStyle: 'hidden',
     frame: false,
@@ -66,13 +66,13 @@ ipcMain.handle('read-file', async (event, filePath) => {
   try {
     const data = fs.readFileSync(filePath);
     return {
-      buffer: data,
+      buffer: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
       path: filePath,
       name: path.basename(filePath)
     };
   } catch (error) {
     console.error('Error reading file:', error);
-    return null;
+    throw error;
   }
 });
 
