@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; worker-src blob:">
+  <title>Audiskope</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="titlebar"><div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4m4-8v12m5-15v18m5-15v12m4-8v4"/></svg>audiskope</div></header>
+    <nav class="toolbar" aria-label="Analysis controls">
+      <button id="open-file-btn" class="button primary" title="Open audio file (⌘/Ctrl+O)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 2h10v13H3zM3 10h18"/></svg>Open file</button>
+      <button id="save-btn" class="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg>Save image</button>
+      <div class="toolbar-divider"></div>
+      <div class="settings-group"><label for="fft-size">FFT size</label><select id="fft-size"><option>512</option><option>1024</option><option selected>2048</option><option>4096</option><option>8192</option></select></div>
+      <div class="settings-group"><label for="color-scheme">Palette</label><select id="color-scheme"><option value="serato">Spectrum</option><option value="3band">3Band</option><option value="ice">Ice</option><option value="fire">Fire</option><option value="mono">Mono</option></select></div>
+      <div class="settings-group"><label for="frequency-scale">Scale</label><select id="frequency-scale"><option value="linear">Linear</option><option value="log">Logarithmic</option></select></div>
+    </nav>
+    <section class="compare-bar" aria-label="A/B comparison">
+<button id="slot-a" class="slot-button selected" aria-pressed="true"><b>A</b><span id="slot-a-name">Load file</span></button>
+<button id="slot-b" class="slot-button" aria-pressed="false"><b>B</b><span id="slot-b-name">Load file</span></button>
+<button id="open-b-btn" class="button">Load B</button><label class="split-toggle"><input type="checkbox" id="compare-split" disabled>Split view</label>
+<span class="compare-note">A/B switches audio at the same time · Shared axes</span></section>
+<section class="file-strip" aria-label="Audio information"><div class="file-heading"><span class="eyebrow">SOURCE</span><h1 id="file-name">No audio loaded</h1></div><div class="file-facts"><span id="file-details">Open a file to inspect its spectrum</span><span id="file-duration">—</span></div></section>
+    <main class="main">
+      <div class="plot-heading"><span>SPECTROGRAM</span><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out" disabled>−</button><span id="zoom-level">1×</span><button id="zoom-in" aria-label="Zoom in" disabled>+</button><button id="zoom-reset" disabled>Fit</button><span class="zoom-hint">Scroll: time · Shift+scroll: Hz · Drag: pan</span></div><span id="analysis-details">FREQUENCY / TIME</span></div>
+      <div class="spectrum-layout">
+        <div class="frequency-column"><span class="axis-unit">kHz</span><div class="freq-axis" id="freq-axis"><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span><span>0</span></div></div>
+        <div class="plot-column">
+          <div class="plot-surface" id="plot-surface">
+            <div class="viz-container" id="viz-container" style="display:none"><div class="spectrogram-section"><span id="primary-label" class="spectrum-label"></span><canvas id="spectrogram-canvas" tabindex="0" aria-label="Audio spectrogram. Scroll to zoom time, Shift scroll to zoom frequency, drag to pan, double-click to fit."></canvas><div id="spectrum-tooltip" role="tooltip" hidden></div><div id="spectrum-playhead" class="spectrum-playhead"></div></div><div id="comparison-section" class="spectrogram-section" hidden><span id="secondary-label" class="spectrum-label"></span><canvas id="comparison-canvas" tabindex="0" aria-label="Comparison spectrum: shared zoom and axes"></canvas><div id="comparison-tooltip" role="tooltip" hidden></div><div id="comparison-playhead" class="spectrum-playhead"></div></div></div>
+            <button class="drop-zone" id="drop-zone"><span class="drop-zone-inner"><svg class="empty-icon" viewBox="0 0 64 48" aria-hidden="true"><path d="M4 21v6m7-13v20m7-25v30m7-20v10m7-27v44m7-32v20m7-25v30m7-20v10m7-8v6"/></svg><strong>Your audio, in detail.</strong><span>Drop an audio file here or <em>browse files</em></span><small>WAV · AIFF · FLAC · ALAC · MP3 · AAC · OGG · OPUS</small></span></button>
+            <div class="loading-indicator" id="loading-indicator" style="display:none" role="status"><div class="spinner"></div><span>Analyzing audio…</span></div>
+          </div>
+          <div class="time-axis" id="time-axis"><span>0:00</span><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span></div>
+        </div>
+        <div class="level-column"><span class="axis-unit">dBFS</span><div class="level-scale"><div class="color-ramp" id="color-ramp"></div><div class="level-labels"><span>0</span><span>−20</span><span>−40</span><span>−60</span><span>−80</span><span>−100</span></div></div></div>
+      </div>
+      <div class="overview"><span class="eyebrow">OVERVIEW</span><div class="waveform-section"><canvas id="waveform-canvas" aria-label="Audio waveform: blue envelope, orange low-frequency body, white high-frequency detail"></canvas><div class="waveform-overlay" id="waveform-overlay"></div></div></div>
+    </main>
+    <footer class="transport">
+      <button class="play-btn" id="play-btn" disabled aria-label="Play" title="Play / pause (Space)"><svg class="play-icon" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><svg class="pause-icon" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+      <span class="time current" id="current-time">0:00</span><span class="time-divider">/</span><span class="time" id="total-time">0:00</span>
+      <div class="timeline"><input aria-label="Playback position" type="range" id="timeline-slider" min="0" max="100" value="0" step="0.1" disabled><div id="timeline-progress"></div></div>
+      <span class="status" id="status" role="status">Ready</span><span class="footer-note">LOCAL AUDIO ANALYSIS</span>
+    </footer>
+  </div>
+  <script type="module" src="../../dist/renderer/renderer.js"></script>
+</body>
+</html>

@@ -1,89 +1,63 @@
-# Audiskope
+<p align="center"><img src="assets/icons/app-icon-1024.png" width="112" alt="Audiskope blue equalizer icon"></p>
+<h1 align="center">Audiskope</h1>
+<p align="center">A minimal desktop spectrogram analyzer for inspecting and comparing audio files.</p>
+<p align="center"><a href="LICENSE">GPL-3.0-only</a> · macOS / Windows / Linux · Electron + TypeScript</p>
 
-Cross-platform Audio Visualizer with Spectrogram Analysis
+## What it does
 
-![License](https://img.shields.io/badge/license-MIT-green)
-![Electron](https://img.shields.io/badge/electron-28.0.0-blue)
+- Inspect a file's spectrogram, with FFT sizes from 512 to 8192 and five palettes: Spectrum, 3Band, Ice, Fire and Mono.
+- Switch between linear and logarithmic frequency scales. Zoom, pan and inspect time, frequency and level under the cursor.
+- Compare two files in A/B slots with synchronized axes and an optional split view.
+- Play audio and seek using the waveform; switch A/B at the same absolute time.
+- Read source codec, bitrate, bit depth when applicable, sample rate and channel count using FFprobe.
+- Export the visible spectrum as PNG. Remember FFT size, palette and frequency scale between sessions.
+- Open files through the picker or drag and drop. Audio is decoded locally; source files are never modified.
 
-## Overview
+## Audio support
 
-Audiskope is a modern, minimal audio visualizer built with Electron. Inspired by tools like [Spek](https://www.spek.cc/) and featuring a Serato DJ-inspired design, it provides powerful audio analysis capabilities in a clean, intuitive interface.
+WAV, AIFF, FLAC, ALAC (typically in M4A), MP3 and AAC are covered by generated-file regression checks. The picker also accepts OGG/Opus, WebM, CAF, WMA, APE, WavPack and MP4 audio. Actual support depends on the bundled FFmpeg build and the file's codec, not just its extension. DRM-protected files are unsupported.
 
-## Features
+Analysis currently uses **channel 1**; playback preserves all channels. Each file has a 256 MB decoded-PCM limit and a two-minute decode timeout. Up to 4096 time columns are computed: zoom enlarges the existing analysis. Cursor levels use the nearest FFT sample. A/B comparison does not align leading silence or normalize loudness. See [analysis details](FEATURES.md).
 
-- **Multi-format Support**: Analyze MP3, WAV, FLAC, M4A, OGG, and AAC audio files
-- **Real-time Spectrogram**: FFT-based frequency analysis with customizable parameters
-- **Waveform Display**: Visual representation of audio amplitude over time
-- **Audio Playback**: Built-in player with timeline scrubbing
-- **Customizable Visualization**: 
-  - Adjustable FFT size (512 - 8192)
-  - Variable window size
-  - Multiple color schemes (Fire, Ice, Mono, Serato)
-  - Intensity control
-- **Drag & Drop**: Easy file loading
-- **Cross-platform**: Works on Windows, macOS, and Linux
+## Run from source
 
-## Installation
+Use **Node.js 22 or later** and npm, matching your machine architecture (arm64 on Apple Silicon). Installation downloads Electron and platform-specific FFmpeg/FFprobe executables and requires internet access.
 
-### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
-
-### Setup
-
-```bash
-# Clone the repository
+```sh
 git clone https://github.com/kmelitzanis/audiskope.git
 cd audiskope
-
-# Install dependencies
-npm install
-
-# Run the application
+npm ci
 npm start
 ```
 
-## Building
+This is a desktop Electron application. iOS and Android icon assets are included for future use; mobile applications are not implemented.
 
-Build standalone executables for your platform:
+## Controls
 
-```bash
-# Build for current platform
-npm run build
+1. Open a file, or drop it into the app. Load B to compare another file; dropping two files fills both slots.
+2. Choose an FFT size, palette and frequency scale.
+3. Scroll over the spectrum to zoom time, Shift+scroll to zoom frequency, and drag to pan. Fit resets the view.
+4. Select A or B to change the audible source. Split view displays both spectrograms.
+5. Use the player controls to listen and the PNG export action to save the visible analysis.
 
-# Build for specific platforms
-npm run build:mac    # macOS
-npm run build:win    # Windows
-npm run build:linux  # Linux
+## Binary release status
+
+Source preparation is available, but the currently installed macOS FFmpeg binary reports nonfree components. Packaging is guarded against releasing it. A redistributable FFmpeg build and matching source materials are required before binary publication; see [release instructions](DEPLOYMENT.md).
+
+## Development and packaging
+
+```sh
+npm run build          # Compile application code
+npm run typecheck      # Check TypeScript
+npm run test:native    # Generate and decode audio fixtures
+npm run test:ui        # Electron UI regression checks (requires a display)
+npm run build:app      # Package for the current platform; output in release/
 ```
 
-## Usage
+Platform commands: `npm run build:mac`, `npm run build:win`, `npm run build:linux`. Build on each target OS with matching architecture dependencies. Packaged installers and signing need target-specific verification. See [release instructions](DEPLOYMENT.md), [contributing](CONTRIBUTING.md), and [icon assets](assets/icons/README.md).
 
-1. **Open an audio file**: Click "Open Audio File" or drag and drop a file into the window
-2. **Analyze**: The spectrogram and waveform will be automatically generated
-3. **Customize**: Adjust FFT size, window size, color scheme, and intensity to your preference
-4. **Playback**: Use the play button and timeline to navigate through your audio
+## License and credits
 
-## Color Schemes
+Copyright (C) 2026 Audiskope contributors. Audiskope is free software licensed under **GNU GPL version 3 only**, without warranty. You may redistribute and modify it under those terms; see [LICENSE](LICENSE).
 
-- **Serato**: Green-to-yellow gradient (default)
-- **Fire**: Black-to-red-to-yellow-to-white
-- **Ice**: Blue-to-cyan-to-white
-- **Mono**: Grayscale
-
-## Technology Stack
-
-- **Electron**: Cross-platform desktop application framework
-- **Web Audio API**: Audio processing and analysis
-- **Canvas API**: Real-time visualization rendering
-- **Node.js**: File system operations
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Inspired by [Spek](https://www.spek.cc/)
-- UI design influenced by Serato DJ
-- Built with Electron and Web Audio API 
+Electron, FFmpeg, FFprobe and other dependencies retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md). Binary releases must include the applicable notices and corresponding source materials described in the release instructions.

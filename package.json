@@ -2,52 +2,112 @@
   "name": "audiskope",
   "version": "1.0.0",
   "description": "Cross-platform Audio Visualizer with Spectrogram Analysis",
-  "main": "main.js",
+  "main": "dist/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux"
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron . --enable-logging",
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "node scripts/build-renderer.js",
+    "build:app": "npm run build && npm run release:check && electron-builder --publish never",
+    "build:mac": "npm run build && npm run release:check && electron-builder --mac --publish never",
+    "build:win": "npm run build && npm run release:check && electron-builder --win --publish never",
+    "build:linux": "npm run build && npm run release:check && electron-builder --linux --publish never",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:native": "node tests/native.cjs",
+    "test:ui": "electron tests/ui.cjs",
+    "licenses": "node scripts/generate-notices.cjs",
+    "icons": "python3 scripts/generate-icons.py",
+    "release:check": "node scripts/generate-notices.cjs --check-release"
   },
   "keywords": [
     "audio",
     "visualizer",
     "spectrogram",
     "electron",
-    "fft"
+    "fft",
+    "typescript"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "kmelitzanis",
+  "license": "GPL-3.0-only",
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.0"
+    "@types/node": "^20.10.0",
+    "electron": "^35.7.5",
+    "electron-builder": "^24.9.0",
+    "typescript": "^5.3.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@ffprobe-installer/ffprobe": "2.1.2",
+    "ffmpeg-static": "5.2.0"
+  },
   "build": {
     "appId": "com.audiskope.app",
     "productName": "Audiskope",
     "files": [
-      "**/*",
+      "dist/**/*",
+      "src/renderer/**/*.html",
+      "src/renderer/**/*.css",
+      "!**/*.ts",
       "!**/*.md",
       "!.gitignore"
+    ],
+    "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "licenses/LICENSE"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "licenses/THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "third-party",
+        "to": "licenses/third-party"
+      },
+      {
+        "from": "assets/icons/desktop/png/512.png",
+        "to": "icon.png"
+      }
     ],
     "mac": {
       "category": "public.app-category.music",
       "target": [
         "dmg"
-      ]
+      ],
+      "icon": "assets/icons/desktop/icon.icns"
     },
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "assets/icons/desktop/icon.ico"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Audio"
+      "category": "Audio",
+      "icon": "assets/icons/desktop/png"
+    },
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "node_modules/@ffprobe-installer/**"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets/icons/desktop"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kmelitzanis/audiskope.git"
+  },
+  "homepage": "https://github.com/kmelitzanis/audiskope#readme",
+  "bugs": {
+    "url": "https://github.com/kmelitzanis/audiskope/issues"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

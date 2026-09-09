@@ -7,3 +7,15 @@ build/
 .vscode/
 *.swp
 *.swo
+
+tests/fixtures/
+tests/profile/
+tests/*.png
+
+release/
+third-party/
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
