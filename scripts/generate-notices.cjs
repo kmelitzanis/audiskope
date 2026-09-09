@@ -29,7 +29,7 @@ for(const [name,binary] of [['ffmpeg',require('ffmpeg-static')],['ffprobe',requi
  binaries[name]={sha256:hash,version,license};
  fs.writeFileSync(path.join(out,name+'-license.txt'),license);
 }
-fs.copyFileSync(path.join(root,'node_modules/ffmpeg-static/ffmpeg.LICENSE'),path.join(out,'ffmpeg-upstream-LICENSE'));
+fs.copyFileSync(require('ffmpeg-static') + '.LICENSE',path.join(out,'ffmpeg-upstream-LICENSE'));
 fs.writeFileSync(path.join(out,'inventory.json'),JSON.stringify({platform:process.platform,arch:process.arch,packages:rows.sort((a,b)=>a.name.localeCompare(b.name)),binaries},null,2)+'\n');
 fs.writeFileSync(path.join(out,'README.md'),'# Generated third-party inventory\n\nIncludes installed development tooling as well as runtime dependencies. Original license texts are copied without modification. Missing licenseFiles means the npm archive does not supply a top-level license file; consult its upstream repository before redistribution. Binary version/configuration and SHA-256 are recorded in inventory.json. This inventory is not a corresponding-source archive.\n');
 console.log(`Captured ${rows.length} package records, Electron notices and native binary licenses.`);
