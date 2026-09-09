@@ -1,6 +1,6 @@
 {
   "name": "audiskope",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Cross-platform Audio Visualizer with Spectrogram Analysis",
   "main": "dist/main/main.js",
   "scripts": {
@@ -19,7 +19,8 @@
     "test:ui": "electron tests/ui.cjs",
     "licenses": "node scripts/generate-notices.cjs",
     "icons": "python3 scripts/generate-icons.py",
-    "release:check": "node scripts/generate-notices.cjs --check-release"
+    "release:check": "node scripts/generate-notices.cjs --check-release",
+    "test:release": "node --test tests/release.test.cjs"
   },
   "keywords": [
     "audio",
@@ -85,7 +86,8 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "category": "Audio",
       "icon": "assets/icons/desktop/png"
@@ -97,7 +99,8 @@
     "directories": {
       "output": "release",
       "buildResources": "assets/icons/desktop"
-    }
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
   },
   "repository": {
     "type": "git",

@@ -8,7 +8,7 @@ The macOS arm64 FFmpeg executable installed during preparation reports: “This 
 
 Use Node 22+ with the target architecture. Run `npm ci`, `npm run build`, `npm run typecheck`, `npm run test:native`, and `npm run test:ui` on a machine with a display. Test drag/drop, playback, A/B, PNG export and settings persistence manually in the packaged app too.
 
-`npm run build:app` builds the current target and generates third-party notices. Explicit commands are `build:mac`, `build:win`, and `build:linux`; artifacts go into `release/`. Desktop icon assets are configured already. No command automatically publishes a release. Build natively for each OS/architecture; do not reuse another platform's node_modules.
+`npm run build:app` builds the current target and generates third-party notices. Explicit commands are `build:mac`, `build:win`, and `build:linux`; artifacts go into `release/`. Desktop icon assets are configured already. Local packaging commands do not publish. The GitHub release workflow publishes after all four target builds pass. Build natively for each OS/architecture; do not reuse another platform's node_modules.
 
 ## Before publishing binaries
 
@@ -19,8 +19,10 @@ Use Node 22+ with the target architecture. Run `npm ci`, `npm run build`, `npm r
 - Review dependencies for known vulnerabilities before release, and test any updates. This preparation does not claim a security audit.
 - Sign/notarize macOS releases and sign Windows installers using your own credentials. Unsigned local packages are for testing; signing credentials are never committed.
 - Smoke-test the actual installer on every advertised OS/architecture. Check native decoder execution and licenses under the installed resources directory.
-- Create a GitHub release with the tested artifacts, matching sources, SHA-256 checksums, change notes and supported platforms. Publishing is a separate maintainer action.
+- Create a GitHub release with the tested artifacts, matching sources, SHA-256 checksums, change notes and supported platforms. Publication is automated by the version workflow once every target succeeds.
 
-The CI workflow checks source builds and native decoding across desktop platforms. It does not publish binaries or claim that signing, installer testing or corresponding-source preparation has been completed.
+The CI workflow checks source builds and native decoding. The separate release workflow reads package.json on pushes to main, builds four native targets, then uploads all assets to a draft before publishing. It does not provide signing, installer smoke testing or matching third-party source archives. Resolve the binary/source prerequisites above before enabling successful binary publication.
+
+Use `npm version <version> --no-git-tag-version` to keep package.json and package-lock.json synchronized, then commit and push. Existing public release versions are skipped. Tags pointing at another commit are rejected; the workflow never moves a tag. Manual dispatch on main retries failures. Release jobs use read-only tokens except the final publication job, which has contents:write. Standard GitHub-hosted runners: ubuntu-24.04 x64, macos-15 arm64, macos-15-intel x64 and windows-2022 x64. See [runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
 Licensing references: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html), [FFmpeg](https://ffmpeg.org/legal.html).

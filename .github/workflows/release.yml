@@ -1,0 +1,156 @@
+name: Release desktop apps
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      build: ${{ steps.plan.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run test:release
+      - id: plan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { releaseVersion } = require('./scripts/release-version.cjs');
+            const plan = releaseVersion(require('./package.json'), require('./package-lock.json'));
+            for (const [key, value] of Object.entries(plan)) core.setOutput(key, String(value));
+            const repo = context.repo;
+            let release;
+            try { release = (await github.rest.repos.getReleaseByTag({...repo, tag: plan.tag})).data; }
+            catch (error) { if (error.status !== 404) throw error; }
+            if (release && !release.draft) {
+              core.info(`${plan.tag} already published; no release needed.`);
+              core.setOutput('build', 'false');
+              return;
+            }
+            const existing = await exec.getExecOutput('git', ['rev-parse', '--verify', `refs/tags/${plan.tag}^{commit}`], {ignoreReturnCode:true, silent:true});
+            if (existing.exitCode === 0 && existing.stdout.trim() !== context.sha) {
+              throw new Error(`${plan.tag} already points to another commit. Increase package.json version; tags are never overwritten.`);
+            }
+            if (release && release.target_commitish !== context.sha) {
+              throw new Error('Existing draft targets another commit. Remove the obsolete draft or bump the version.');
+            }
+            core.setOutput('build', 'true');
+
+  build:
+    needs: version
+    if: needs.version.outputs.build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: ubuntu-x64
+            os: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - id: macos-arm64
+            os: macos-15
+            platform: mac
+            arch: arm64
+          - id: macos-x64
+            os: macos-15-intel
+            platform: mac
+            arch: x64
+          - id: windows-x64
+            os: windows-2022
+            platform: win
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          architecture: ${{ matrix.arch }}
+          cache: npm
+      - name: Verify native runner architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: node -e "if(process.arch !== process.env.EXPECTED_ARCH) process.exit(1)"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run test:native
+      - name: Check native binary redistribution and collect notices
+        run: npm run release:check
+      - name: Package installers
+        run: npx --no-install electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+      - name: Bundle target-specific license inventory
+        shell: bash
+        run: tar -czf "release/notices-${{ matrix.id }}.tar.gz" LICENSE THIRD_PARTY_NOTICES.md third-party
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.id }}
+          if-no-files-found: error
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+            release/notices-*.tar.gz
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.version.outputs.tag }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
+      RELEASE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: release-assets
+      - name: Verify complete installer set and create checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          for suffix in linux-x64.AppImage linux-x64.deb mac-arm64.dmg mac-x64.dmg win-x64.exe; do
+            test -s "release-assets/Audiskope-${version}-${suffix}"
+          done
+          for target in ubuntu-x64 macos-arm64 macos-x64 windows-x64; do
+            test -s "release-assets/notices-${target}.tar.gz"
+          done
+          git archive --format=tar.gz --prefix="Audiskope-${version}/" --output="release-assets/Audiskope-${version}-source.tar.gz" "$RELEASE_SHA"
+          (cd release-assets && sha256sum * > SHA256SUMS.txt)
+      - name: Create draft and upload complete assets before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            args=()
+            if [ "$PRERELEASE" = true ]; then args+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "Audiskope $RELEASE_TAG" --draft --generate-notes "${args[@]}"
+          fi
+          gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          gh release edit "$RELEASE_TAG" --draft=false
