@@ -21,7 +21,7 @@ pnpm run build:app
 
 The first native build downloads a checksum-pinned source archive. Outputs are in `native/<platform>-<arch>`; intermediates are in `.native-build/`. Both are ignored by Git. Build again whenever the source pin or flags change. Build each target natively. `pnpm start` expects tools to have been built once.
 
-The build disables autodetection, GPL, version3, nonfree and external codec libraries. Only local audio decoding plus a few built-in encoders for synthetic tests is enabled. No MP3 encoding is shipped; MP3 decoding uses a committed synthetic sample for regression checks. This configuration requires no purchased codec library. The previous nonfree binary dependency has been removed.
+The build disables autodetection, GPL, version3, nonfree and external codec libraries. Only local audio decoding plus a few built-in encoders for synthetic tests is enabled. No MP3 encoding is shipped; MP3 decoding uses a committed synthetic sample for regression checks. This configuration requires no purchased codec library and relies solely on official-source LGPL builds.
 
 ## Corresponding source and notices
 

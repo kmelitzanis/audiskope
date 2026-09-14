@@ -13,15 +13,15 @@
     <nav class="toolbar" aria-label="Analysis controls">
       <button id="open-file-btn" class="button primary" title="Open audio file (⌘/Ctrl+O)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 2h10v13H3zM3 10h18"/></svg>Open file</button>
       <button id="save-btn" class="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg>Save image</button>
+      <button id="compare-btn" class="button" aria-pressed="false" aria-controls="compare-bar">Compare 2 files</button>
       <div class="toolbar-divider"></div>
       <div class="settings-group"><label for="fft-size">FFT size</label><select id="fft-size"><option>512</option><option>1024</option><option selected>2048</option><option>4096</option><option>8192</option></select></div>
-      <div class="settings-group"><label for="color-scheme">Palette</label><select id="color-scheme"><option value="serato">Spectrum</option><option value="3band">3Band</option><option value="ice">Ice</option><option value="fire">Fire</option><option value="mono">Mono</option></select></div>
-      <div class="settings-group"><label for="frequency-scale">Scale</label><select id="frequency-scale"><option value="linear">Linear</option><option value="log">Logarithmic</option></select></div>
+      <div class="settings-group"><label for="color-scheme">Palette</label><select id="color-scheme"><option value="3band">Tri-band</option><option value="ice">Ice</option><option value="fire">Fire</option></select></div>
     </nav>
-    <section class="compare-bar" aria-label="A/B comparison">
+    <section id="compare-bar" hidden class="compare-bar" aria-label="A/B comparison">
 <button id="slot-a" class="slot-button selected" aria-pressed="true"><b>A</b><span id="slot-a-name">Load file</span></button>
 <button id="slot-b" class="slot-button" aria-pressed="false"><b>B</b><span id="slot-b-name">Load file</span></button>
-<button id="open-b-btn" class="button">Load B</button><label class="split-toggle"><input type="checkbox" id="compare-split" disabled>Split view</label>
+<button id="open-b-btn" class="button">Load B</button>
 <span class="compare-note">A/B switches audio at the same time · Shared axes</span></section>
 <section class="file-strip" aria-label="Audio information"><div class="file-heading"><span class="eyebrow">SOURCE</span><h1 id="file-name">No audio loaded</h1></div><div class="file-facts"><span id="file-details">Open a file to inspect its spectrum</span><span id="file-duration">—</span></div></section>
     <main class="main">

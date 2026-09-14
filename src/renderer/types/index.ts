@@ -31,11 +31,10 @@ export interface SpectrogramData {
     numFrames: number;
     bufferLength: number;
 }
-export type ColorScheme = 'serato' | 'fire' | 'ice' | 'mono' | '3band';
+export type ColorScheme = 'fire' | 'ice' | '3band';
 export interface AppSettings {
     fftSize: number;
     colorScheme: ColorScheme;
-    frequencyScale: 'linear' | 'log';
 }
 declare global {
     interface Window {

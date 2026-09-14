@@ -1,10 +1,9 @@
-export type FrequencyScale = 'linear' | 'log';
 export interface SpectrumView { x0: number; x1: number; y0: number; y1: number }
 export const fullView = (): SpectrumView => ({ x0: 0, x1: 1, y0: 0, y1: 1 });
 export const clamp = (v: number, lo = 0, hi = 1): number => Math.max(lo, Math.min(hi, v));
-// y=0 is the top of the plot. Log mode deliberately excludes DC.
-export function frequencyAt(y: number, nyquist: number, scale: FrequencyScale): number {
-  return scale === 'log' ? 20 * Math.pow(nyquist / 20, 1 - y) : nyquist * (1 - y);
+// y=0 is the top of the plot.
+export function frequencyAt(y: number, nyquist: number): number {
+  return nyquist * (1 - y);
 }
 export function zoomRange(lo: number, hi: number, anchor: number, factor: number): [number, number] {
   const span = clamp((hi - lo) / factor, 1 / 64, 1);

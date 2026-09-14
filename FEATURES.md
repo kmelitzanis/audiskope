@@ -1,3 +1,5 @@
+Comparison controls appear only after clicking Compare 2 files next to Save image. Two loaded files always use split view. Exit comparison returns to one file; dropping multiple files in single-file mode loads only the first.
+
 # Audio analysis and A/B comparison
 
 - Open a file into the selected A or B slot. Load B adds a comparison file; Open file replaces the selected slot. Drop onto an A/B button to target that slot, or drop two files together to fill both.
@@ -5,9 +7,9 @@
 - Source metadata comes from FFprobe: codec, bitrate, bit depth when meaningful, original sample rate and channel count. A container-average bitrate is explicitly marked. Lossy formats show bit depth N/A.
 - Bundled FFmpeg decodes audio to float PCM at its original sample rate. WAV, AIFF, ALAC, FLAC, MP3 and AAC have synthetic-file regression checks. The picker also accepts OGG/Opus, WebM, CAF, WMA, APE and WavPack; support depends on codec/stream validity. Encrypted/DRM audio is not supported. Files are never modified.
 - The decoder has a 256 MB decoded-PCM limit per file and a two-minute timeout. Both tracks stay in memory. Spectra currently analyze channel 1; playback preserves all channels.
-- The 3Band-inspired spectrum palette now maps intensity smoothly from blue to amber to white, rather than dividing frequency into solid zones. The player's waveform retains its separate three-layer rendering. Spectrum intensity uses a 16-bit texture with interpolation; cursor readings use the nearest original FFT sample. Up to 4096 time columns are computed; zoom does not add new FFT resolution.
-- Scroll zooms time, Shift+scroll zooms frequency, drag pans, Fit resets. Log scale starts at 20 Hz. PNG export includes the current single/split view and its visible axes.
-- FFT size, palette and frequency scale are saved locally. Files are not reopened automatically.
+- Three palettes are available: Tri-band, Ice and Fire. Tri-band maps intensity smoothly from blue to amber to white, rather than dividing frequency into solid zones. The player's waveform, the level ramp and the PNG legend all sample the same palette function as the spectrogram shader, so the waveform's three nested layers are colored by the selected palette. Spectrum intensity uses a 16-bit texture with interpolation; cursor readings use the nearest original FFT sample. Up to 4096 time columns are computed; zoom does not add new FFT resolution.
+- Scroll zooms time, Shift+scroll zooms frequency, drag pans, Fit resets. Frequency is always displayed on a linear scale. PNG export includes the current single/split view and its visible axes.
+- FFT size and palette are saved locally. Files are not reopened automatically.
 
 ## Development and packaging
 

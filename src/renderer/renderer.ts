@@ -1,6 +1,7 @@
 import { SpectrumView, fullView, frequencyAt, zoomRange, panRange, clamp, preciseTime } from './utils/spectrumView';
 import { AppSettings, ColorScheme, SpectrogramData, AudioMetadata } from './types';
 import { processWaveform, WaveformBands } from './utils/waveformProcessor';
+import { sampleScheme, rampStops, WAVEFORM_STOPS } from './utils/palette';
 import { formatTime } from './utils/helpers';
 import { FFTProcessor } from './utils/fftProcessor';
 import { WebGLSpectrogramRenderer } from './utils/webglRenderer';
@@ -29,10 +30,11 @@ interface AudioSlot {
 }
 const slots: Record<SlotKey, AudioSlot | null> = { A: null, B: null };
 let activeSlot: SlotKey = 'A';
+let comparisonMode = false;
 let comparisonRenderer: WebGLSpectrogramRenderer | null = null;
 let comparisonUploaded: SpectrogramData | null = null;
 function otherKey(): SlotKey { return activeSlot === 'A' ? 'B' : 'A'; }
-function splitEnabled(): boolean { return !!slots.A && !!slots.B && (document.getElementById('compare-split') as HTMLInputElement).checked; }
+function splitEnabled(): boolean { return comparisonMode && !!slots.A && !!slots.B; }
 function displayDuration(): number { return splitEnabled() ? Math.max(slots.A!.buffer.duration, slots.B!.buffer.duration) : audioBuffer?.duration || 1; }
 function displayNyquist(): number { return splitEnabled() ? Math.max(slots.A!.buffer.sampleRate, slots.B!.buffer.sampleRate) / 2 : (audioBuffer?.sampleRate || 48000) / 2; }
 // Processors
@@ -41,8 +43,7 @@ let glRenderer: WebGLSpectrogramRenderer | null = null;
 // Settings
 const settings: AppSettings = {
     fftSize: 2048,
-    colorScheme: 'serato',
-    frequencyScale: 'linear'
+    colorScheme: '3band',
 };
 // DOM Elements - initialized after DOM ready
 let elements: {
@@ -88,17 +89,14 @@ function init(): void {
     };
     try {
         const saved = JSON.parse(localStorage.getItem('audiskope.settings') || '{}');
-        if (saved && ['linear', 'log'].includes(saved.frequencyScale))
-            settings.frequencyScale = saved.frequencyScale;
         if (saved && [512, 1024, 2048, 4096, 8192].includes(saved.fftSize))
             settings.fftSize = saved.fftSize;
-        if (saved && ['serato', 'fire', 'ice', 'mono', '3band'].includes(saved.colorScheme))
+        if (saved && ['3band', 'fire', 'ice'].includes(saved.colorScheme))
             settings.colorScheme = saved.colorScheme;
     }
     catch { /* Invalid or unavailable storage uses the default settings. */ }
     elements.fftSelect.value = String(settings.fftSize);
     elements.colorSelect.value = settings.colorScheme;
-    (document.getElementById('frequency-scale') as HTMLSelectElement).value = settings.frequencyScale;
     updatePalette();
     // Initialize FFT processor
     fftProcessor = new FFTProcessor();
@@ -120,7 +118,20 @@ function setupEventListeners(): void {
     document.getElementById('slot-a')!.addEventListener('click', () => selectSlot('A'));
     document.getElementById('slot-b')!.addEventListener('click', () => selectSlot('B'));
     document.getElementById('open-b-btn')!.addEventListener('click', () => openFile('B'));
-    document.getElementById('compare-split')!.addEventListener('change', () => { view = fullView(); updateSlotUI(); handleResize(); refreshView(); });
+    document.getElementById('compare-btn')!.addEventListener('click', () => {
+        if (isLoading || isProcessing) return;
+        comparisonMode = !comparisonMode;
+        if (!comparisonMode && activeSlot === 'B') {
+            stop();
+            if (!slots.A) { slots.A = slots.B; slots.B = null; }
+            activeSlot = 'A';
+            activateCurrentSlot();
+        }
+        view = fullView();
+        updateSlotUI();
+        handleResize();
+        refreshView();
+    });
     document.getElementById('save-btn')!.addEventListener('click', saveImage);
     document.addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
@@ -190,6 +201,7 @@ function setupEventListeners(): void {
         saveSettings();
         updatePalette();
         renderSpectrogram();
+        drawWaveform();
     });
 }
 async function openFile(target: SlotKey = activeSlot): Promise<void> {
@@ -214,7 +226,7 @@ async function handleFileDrop(e: DragEvent): Promise<void> {
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
         try {
-            const paths = Array.from(files).slice(0, 2).map(file => window.api.getDroppedFilePath(file));
+            const paths = Array.from(files).slice(0, comparisonMode ? 2 : 1).map(file => window.api.getDroppedFilePath(file));
             const target = e.target instanceof Element ? e.target : null;
             const key: SlotKey = target?.closest('#slot-b') ? 'B' : target?.closest('#slot-a') ? 'A' : target?.closest('#comparison-section') ? otherKey() : activeSlot;
             if (paths[0]) {
@@ -254,8 +266,6 @@ async function loadAudioFile(filePath: string, target: SlotKey = activeSlot): Pr
         slots[target] = { name: fileData.name, buffer: decoded, metadata: meta, waveform, spectrum, fftSize: settings.fftSize };
         activeSlot = target;
         view = fullView();
-        if (slots.A && slots.B)
-            (document.getElementById('compare-split') as HTMLInputElement).checked = true;
         activateCurrentSlot();
         elements.dropZone.style.display = 'none';
         elements.vizContainer.style.display = 'flex';
@@ -303,7 +313,9 @@ function updateSlotUI(): void {
         document.getElementById('slot-' + key.toLowerCase() + '-name')!.textContent = slots[key]?.name || 'Load file';
         b.title = slots[key] ? describeMetadata(slots[key]!.metadata) : `Load file ${key}`;
     }
-    (document.getElementById('compare-split') as HTMLInputElement).disabled = !slots.A || !slots.B || isLoading || isProcessing;
+    document.getElementById('compare-bar')!.hidden = !comparisonMode;
+    document.getElementById('compare-btn')!.setAttribute('aria-pressed', String(comparisonMode));
+    document.getElementById('compare-btn')!.textContent = comparisonMode ? 'Exit comparison' : 'Compare 2 files';
     document.getElementById('comparison-section')!.hidden = !splitEnabled();
     document.getElementById('primary-label')!.textContent = `${activeSlot} · ${slots[activeSlot]?.name || ''}`;
     document.getElementById('secondary-label')!.textContent = `${otherKey()} · ${slots[otherKey()]?.name || ''}`;
@@ -365,14 +377,14 @@ async function processSpectrogram(): Promise<void> {
 function renderSpectrogram(): void {
     if (!spectrogramData)
         return;
-    const colorIndex = ['serato', 'fire', 'ice', 'mono', '3band'].indexOf(settings.colorScheme);
+    const colorIndex = ['3band', 'fire', 'ice'].indexOf(settings.colorScheme);
     if (glRenderer) {
         glRenderer.resize();
         if (uploadedData !== spectrogramData) {
             glRenderer.setData(spectrogramData.frames, spectrogramData.numFrames, spectrogramData.bufferLength);
             uploadedData = spectrogramData;
         }
-        glRenderer.render(colorIndex, audioBuffer?.sampleRate || 48000, view, settings.frequencyScale === 'log', displayNyquist(), displayDuration() / audioBuffer!.duration, audioBuffer!.duration);
+        glRenderer.render(colorIndex, audioBuffer?.sampleRate || 48000, view, displayNyquist(), displayDuration() / audioBuffer!.duration, audioBuffer!.duration);
     }
     const other = slots[otherKey()];
     if (splitEnabled() && other && comparisonRenderer) {
@@ -381,7 +393,7 @@ function renderSpectrogram(): void {
             comparisonRenderer.setData(other.spectrum.frames, other.spectrum.numFrames, other.spectrum.bufferLength);
             comparisonUploaded = other.spectrum;
         }
-        comparisonRenderer.render(colorIndex, other.buffer.sampleRate, view, settings.frequencyScale === 'log', displayNyquist(), displayDuration() / other.buffer.duration, other.buffer.duration);
+        comparisonRenderer.render(colorIndex, other.buffer.sampleRate, view, displayNyquist(), displayDuration() / other.buffer.duration, other.buffer.duration);
     }
 }
 function drawWaveform(): void {
@@ -410,7 +422,9 @@ function drawWaveform(): void {
             return Math.sqrt(energy / Math.max(1, end - start));
         });
     });
-    // A consistent blue silhouette, orange body, and restrained white detail.
+    // Layer colors come from the same palette function the spectrogram shader
+    // uses, so the waveform always matches the spectrum above it.
+    const [outerColor, bodyColor, detailColor] = WAVEFORM_STOPS.map(stop => sampleScheme(settings.colorScheme, stop));
     // Band RMS drives the nested layers; never swap their order per pixel.
     for (let x = 0; x < width; x++) {
         const values = envelopes[x].map((v, band) => v * 0.6 + envelopes[Math.max(0, x - 1)][band] * 0.2 +
@@ -424,7 +438,7 @@ function drawWaveform(): void {
         const body = outer * (0.32 + 0.4 * low / sum);
         const detail = Math.min(body * 0.38, outer * high / sum * 0.32);
         for (const [color, extent] of [
-            ['#2588ef', outer], ['#ff9e19', body], ['#f3f3f3', detail]
+            [outerColor, outer], [bodyColor, body], [detailColor, detail]
         ] as [
             string,
             number
@@ -459,10 +473,9 @@ function showLoading(show: boolean): void {
     if (elements?.loading) {
         elements.loading.style.display = show ? 'flex' : 'none';
         elements.fftSelect.disabled = show;
-        for (const id of ['slot-a', 'slot-b', 'open-b-btn'])
+        for (const id of ['slot-a', 'slot-b', 'open-b-btn', 'compare-btn'])
             (document.getElementById(id) as HTMLButtonElement).disabled = show;
         (document.getElementById('save-btn') as HTMLButtonElement).disabled = show || !spectrogramData || !glRenderer;
-        (document.getElementById('compare-split') as HTMLInputElement).disabled = show || !slots.A || !slots.B;
         document.getElementById('comparison-tooltip')!.hidden = true;
         document.getElementById('spectrum-tooltip')!.hidden = true;
         for (const id of ['zoom-in', 'zoom-out', 'zoom-reset'])
@@ -574,7 +587,7 @@ function updateAxes(): void {
     for (let p = 0; p < panels; p++)
         for (let i = 0; i <= ticks; i++) {
             const label = document.createElement('span');
-            label.textContent = (frequencyAt(view.y0 + (view.y1 - view.y0) * i / ticks, displayNyquist(), settings.frequencyScale) / 1000).toFixed(2);
+            label.textContent = (frequencyAt(view.y0 + (view.y1 - view.y0) * i / ticks, displayNyquist()) / 1000).toFixed(2);
             label.style.top = `${(p + i / ticks) / panels * 100}%`;
             if (i === 0)
                 label.style.transform = 'translateY(0)';
@@ -607,15 +620,6 @@ function setupSpectrumInteraction(secondary = false): void {
     const canvas = secondary ? document.getElementById('comparison-canvas') as HTMLCanvasElement : elements.spectrogramCanvas;
     const tooltip = document.getElementById(secondary ? 'comparison-tooltip' : 'spectrum-tooltip')!;
     const ready = () => !!audioBuffer && !!spectrogramData && !isProcessing && !isLoading;
-    const scaleSelect = document.getElementById('frequency-scale') as HTMLSelectElement;
-    if (!secondary)
-        scaleSelect.addEventListener('change', () => {
-            settings.frequencyScale = scaleSelect.value as 'linear' | 'log';
-            view.y0 = 0;
-            view.y1 = 1;
-            saveSettings();
-            refreshView();
-        });
     const zoom = (factor: number, x = 0.5, y = 0.5, vertical = false) => {
         if (!ready())
             return;
@@ -674,7 +678,7 @@ function setupSpectrumInteraction(secondary = false): void {
         const buffer = slot.buffer, data = slot.spectrum;
         const x = clamp((e.clientX - box.left) / box.width), y = clamp((e.clientY - box.top) / box.height);
         const time = (view.x0 + x * (view.x1 - view.x0)) * displayDuration();
-        const hz = frequencyAt(view.y0 + y * (view.y1 - view.y0), displayNyquist(), settings.frequencyScale);
+        const hz = frequencyAt(view.y0 + y * (view.y1 - view.y0), displayNyquist());
         if (time > buffer.duration || hz > buffer.sampleRate / 2)
             tooltip.textContent = `${preciseTime(time)} · ${hz.toFixed(1)} Hz · No data`;
         else {
@@ -717,18 +721,12 @@ function saveSettings(): void {
     }
 }
 function updatePalette(): void {
-    const ramps = {
-        serato: '#000,#270080,#004aff,#00d4dc,#73ef38,#fff02c,#ff4b18',
-        ice: '#000,#000080,#00ccff,#fff',
-        fire: '#000,#660000,#ff4d00,#ffff00,#fff',
-        mono: '#000,#fff',
-        '3band': '#010306,#1a6ee0 55%,#ff8f12 84%,#fff7e6'
-    };
     document.getElementById('color-scheme')!.title = settings.colorScheme === '3band'
-        ? '3Band-inspired intensity: blue quiet detail, orange body, white peaks.'
+        ? 'Tri-band intensity: blue quiet detail, orange body, white peaks.'
         : 'Spectrogram intensity palette';
-    document.getElementById('color-ramp')!.title = settings.colorScheme === '3band' ? 'Intensity: −100 to 0 dBFS' : 'Intensity: −100 to 0 dBFS';
-    document.getElementById('color-ramp')!.style.background = `linear-gradient(to top,${ramps[settings.colorScheme]})`;
+    document.getElementById('color-ramp')!.title = 'Intensity: −100 to 0 dBFS';
+    const ramp = rampStops(settings.colorScheme).map(({ offset, color }) => `${color} ${(offset * 100).toFixed(1)}%`).join(',');
+    document.getElementById('color-ramp')!.style.background = `linear-gradient(to top,${ramp})`;
 }
 function saveImage(): void {
     if (!audioBuffer || !spectrogramData || !glRenderer)
@@ -744,7 +742,7 @@ function saveImage(): void {
     ctx.fillText(elements.fileName.textContent || 'Audiskope', 64, 40, 1450);
     ctx.fillStyle = '#8a9098';
     ctx.font = '14px monospace';
-    ctx.fillText(`${document.getElementById('file-details')!.textContent} · FFT ${settings.fftSize} · Hann · Channel 1 · ${settings.frequencyScale} frequency`, 64, 68);
+    ctx.fillText(`${document.getElementById('file-details')!.textContent} · FFT ${settings.fftSize} · Hann · Channel 1 · linear frequency`, 64, 68);
     const panels = splitEnabled() ? 2 : 1, panelHeight = 780 / panels;
     for (let p = 0; p < panels; p++) {
         const canvas = p === 0 ? elements.spectrogramCanvas : document.getElementById('comparison-canvas') as HTMLCanvasElement;
@@ -758,7 +756,7 @@ function saveImage(): void {
         ctx.fillStyle = '#aab5c0';
         ctx.font = '12px monospace';
         for (let i = 0; i <= 5; i++)
-            ctx.fillText((frequencyAt(view.y0 + (view.y1 - view.y0) * i / 5, displayNyquist(), settings.frequencyScale) / 1000).toFixed(2), 4, 107 + p * panelHeight + (panelHeight - 14) * i / 5);
+            ctx.fillText((frequencyAt(view.y0 + (view.y1 - view.y0) * i / 5, displayNyquist()) / 1000).toFixed(2), 4, 107 + p * panelHeight + (panelHeight - 14) * i / 5);
     }
     for (let i = 0; i <= 5; i++) {
         ctx.fillText(preciseTime(displayDuration() * (view.x0 + (view.x1 - view.x0) * i / 5)), 64 + 272 * i, 906);
@@ -766,14 +764,13 @@ function saveImage(): void {
     }
     ctx.fillText('kHz', 12, 87);
     ctx.fillText('dBFS', 1510, 87);
-    const palette = getComputedStyle(document.getElementById('color-ramp')!).backgroundImage;
-    const colors = palette.match(/rgb\([^)]+\)/g) || ['#000', '#fff'];
     const gradient = ctx.createLinearGradient(0, 880, 0, 100);
-    colors.forEach((color, i) => gradient.addColorStop(settings.colorScheme === '3band' ? [0, .55, .84, 1][i] : i / (colors.length - 1), color));
+    for (const { offset, color } of rampStops(settings.colorScheme))
+        gradient.addColorStop(offset, color);
     ctx.fillStyle = gradient;
     ctx.fillRect(1505, 100, 10, 780);
     ctx.fillStyle = '#697682';
-    ctx.fillText(settings.colorScheme === '3band' ? 'AUDISKOPE / 3BAND INTENSITY: BLUE / ORANGE / WHITE' : 'AUDISKOPE / AUDIO SPECTRUM ANALYZER', 64, 944);
+    ctx.fillText(settings.colorScheme === '3band' ? 'AUDISKOPE / TRI-BAND INTENSITY: BLUE / ORANGE / WHITE' : 'AUDISKOPE / AUDIO SPECTRUM ANALYZER', 64, 944);
     const link = document.createElement('a');
     link.download = `${elements.fileName.textContent || 'audiskope'}-spectrum.png`;
     link.href = output.toDataURL('image/png');

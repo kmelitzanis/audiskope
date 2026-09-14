@@ -42,21 +42,12 @@ export class WebGLSpectrogramRenderer {
       uniform int uColorScheme;
       uniform float uSampleRate;
       uniform vec4 uView;
-      uniform int uLog;
       uniform float uBins;
       uniform float uMaxFrequency;
       uniform float uTimeRatio;
       uniform float uDuration;
       uniform float uFrames;
 
-      vec3 seratoColor(float v) {
-        if (v < 0.1667) return mix(vec3(0.), vec3(.153,0.,.502), v * 6.);
-        if (v < 0.3333) return mix(vec3(.153,0.,.502), vec3(0.,.29,1.), (v-.1667)*6.);
-        if (v < 0.5) return mix(vec3(0.,.29,1.), vec3(0.,.831,.863), (v-.3333)*6.);
-        if (v < 0.6667) return mix(vec3(0.,.831,.863), vec3(.451,.937,.22), (v-.5)*6.);
-        if (v < 0.8333) return mix(vec3(.451,.937,.22), vec3(1.,.941,.173), (v-.6667)*6.);
-        return mix(vec3(1.,.941,.173), vec3(1.,.294,.094), (v-.8333)*6.);
-      }
 
       vec3 fireColor(float v) {
         if (v < 0.25) return vec3(v * 4.0 * 0.4, 0.0, 0.0);
@@ -71,14 +62,10 @@ export class WebGLSpectrogramRenderer {
         return vec3((v - 0.66) * 3.0, 0.8 + (v - 0.66) * 0.6, 1.0);
       }
 
-      vec3 monoColor(float v) {
-        return vec3(v);
-      }
 
       void main() {
         float y = mix(uView.z, uView.w, vTexCoord.y);
-        float frequency = uLog == 1 ? 20.0 * pow(uMaxFrequency / 20.0, 1.0 - y)
-          : (1.0 - y) * uMaxFrequency;
+        float frequency = (1.0 - y) * uMaxFrequency;
         float time = mix(uView.x, uView.y, vTexCoord.x) * uTimeRatio;
         if(time > 1.0 || frequency > uSampleRate * 0.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}
         float bin = min(uBins - 1.0, frequency / (uSampleRate * 0.5) * uBins);
@@ -89,15 +76,13 @@ export class WebGLSpectrogramRenderer {
         float value=(texel.r*256.0+texel.a)/257.0;
         vec3 color;
 
-        if (uColorScheme == 0) color = seratoColor(value);
-        else if (uColorScheme == 1) color = fireColor(value);
+        if (uColorScheme == 1) color = fireColor(value);
         else if (uColorScheme == 2) color = iceColor(value);
-        else if (uColorScheme == 4) {
+        else {
           if(value<0.55) color=mix(vec3(0.005,0.012,0.025),vec3(0.10,0.43,0.88),pow(value/0.55,1.8));
           else if(value<0.84) color=mix(vec3(0.10,0.43,0.88),vec3(1.0,0.56,0.07),smoothstep(0.55,0.84,value));
           else color=mix(vec3(1.0,0.56,0.07),vec3(1.0,0.97,0.90),smoothstep(0.84,1.0,value));
         }
-        else color = monoColor(value);
 
         gl_FragColor = vec4(color, 1.0);
       }
@@ -176,7 +161,7 @@ export class WebGLSpectrogramRenderer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     }
-    render(colorScheme: number, sampleRate: number, view: SpectrumView, logarithmic: boolean, maxFrequency = sampleRate / 2, timeRatio = 1, duration = 1): void {
+    render(colorScheme: number, sampleRate: number, view: SpectrumView, maxFrequency = sampleRate / 2, timeRatio = 1, duration = 1): void {
         if (!this.initialized || !this.program)
             return;
         const gl = this.gl;
@@ -186,7 +171,6 @@ export class WebGLSpectrogramRenderer {
         gl.uniform1i(this.colorSchemeLocation, colorScheme);
         gl.uniform1f(gl.getUniformLocation(this.program, 'uSampleRate'), sampleRate);
         gl.uniform4f(gl.getUniformLocation(this.program, 'uView'), view.x0, view.x1, view.y0, view.y1);
-        gl.uniform1i(gl.getUniformLocation(this.program, 'uLog'), logarithmic ? 1 : 0);
         gl.uniform1f(gl.getUniformLocation(this.program, 'uBins'), this.bins);
         gl.uniform1f(gl.getUniformLocation(this.program, 'uMaxFrequency'), maxFrequency);
         gl.uniform1f(gl.getUniformLocation(this.program, 'uTimeRatio'), timeRatio);

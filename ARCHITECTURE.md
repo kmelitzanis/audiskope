@@ -5,7 +5,8 @@
 - `src/main/preload.ts`: isolated renderer bridge, including native drop paths.
 - `src/renderer/renderer.ts`: controls, playback, A/B state and persisted preferences.
 - `src/renderer/utils/fftProcessor.ts`: FFT spectrogram analysis.
-- `src/renderer/utils/webglRenderer.ts`: spectrum textures and palettes.
+- `src/renderer/utils/webglRenderer.ts`: spectrum textures and the palette fragment shader.
+- `src/renderer/utils/palette.ts`: TypeScript mirror of the shader palettes, shared by the waveform, level ramp and PNG legend.
 - `src/renderer/utils/spectrumView.ts`: view coordinates and zoom.
 - `src/renderer/utils/waveformProcessor.ts`: player waveform data.
 
