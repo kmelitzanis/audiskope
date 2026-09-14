@@ -115,6 +115,14 @@ jobs:
       - run: pnpm run test:native
       - name: Check native binary redistribution and collect notices
         run: pnpm run release:check
+      # electron-builder mounts the DMG to apply its window layout before
+      # detaching it. Spotlight indexes the new volume and holds it open, so
+      # `hdiutil detach` fails with "Resource busy" on every retry.
+      - name: Free the DMG volume from Spotlight indexing
+        if: runner.os == 'macOS'
+        run: |
+          sudo mdutil -a -i off || true
+          sudo mdutil -X / || true
       - name: Package installers
         run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
       - name: Bundle target-specific license inventory
