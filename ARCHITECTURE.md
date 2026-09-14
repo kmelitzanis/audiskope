@@ -9,6 +9,6 @@
 - `src/renderer/utils/spectrumView.ts`: view coordinates and zoom.
 - `src/renderer/utils/waveformProcessor.ts`: player waveform data.
 
-TypeScript main-process output and browser modules compile into dist. HTML and CSS are packaged from src/renderer. FFmpeg and FFprobe remain outside app.asar so they can execute. Packaging includes generated dependency notices and the application GPL text under resources/licenses.
+TypeScript main-process output and browser modules compile into dist. HTML and CSS are packaged from src/renderer. Source-built FFmpeg and FFprobe live under resources/audio-tools outside app.asar. src/main/nativePaths.ts resolves development and packaged paths. Packaging includes generated dependency notices and the application GPL text under resources/licenses.
 
 See [FEATURES](FEATURES.md) for analysis limits and [DEPLOYMENT](DEPLOYMENT.md) for release verification.

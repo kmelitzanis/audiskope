@@ -1,0 +1,3 @@
+# Synthetic MP3 regression sample
+
+synthetic.mp3 is the eight-second deterministic generated waveform defined by the wave() function in tests/native.cjs, encoded at 64 kbit/s MP3 during development. It contains synthesized tones/noise, not a third-party recording. Original Audiskope test data, GPL-3.0-only. Kept as a decoding fixture because the shipped tools deliberately do not include an external MP3 encoder. To regenerate using a separately installed FFmpeg with an MP3 encoder: generate reference.wav with the native test, then encode it with `ffmpeg -i tests/fixtures/reference.wav -c:a libmp3lame -b:a 64k tests/samples/synthetic.mp3`.

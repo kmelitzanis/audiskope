@@ -12,7 +12,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  secret-scan:
+    uses: ./.github/workflows/secrets.yml
   version:
+    needs: secret-scan
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     outputs:
@@ -24,16 +27,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm run test:release
+      - run: pnpm run test:release
       - id: plan
         uses: actions/github-script@v7
         with:
           script: |
             const { releaseVersion } = require('./scripts/release-version.cjs');
-            const plan = releaseVersion(require('./package.json'), require('./package-lock.json'));
+            const plan = releaseVersion(require('./package.json'));
             for (const [key, value] of Object.entries(plan)) core.setOutput(key, String(value));
             const repo = context.repo;
             let release;
@@ -82,23 +86,37 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           architecture: ${{ matrix.arch }}
-          cache: npm
+          cache: pnpm
       - name: Verify native runner architecture
         env:
           EXPECTED_ARCH: ${{ matrix.arch }}
         run: node -e "if(process.arch !== process.env.EXPECTED_ARCH) process.exit(1)"
-      - run: npm ci
-      - run: npm run build
-      - run: npm run typecheck
-      - run: npm run test:native
+      - run: pnpm install --frozen-lockfile
+      - uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc make curl tar xz
+      - name: Build LGPL audio tools (Unix)
+        if: runner.os != 'Windows'
+        run: bash scripts/build-audio.sh
+      - name: Build LGPL audio tools (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: bash scripts/build-audio.sh
+      - run: pnpm run build
+      - run: pnpm run typecheck
+      - run: pnpm run test:native
       - name: Check native binary redistribution and collect notices
-        run: npm run release:check
+        run: pnpm run release:check
       - name: Package installers
-        run: npx --no-install electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+        run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
       - name: Bundle target-specific license inventory
         shell: bash
         run: tar -czf "release/notices-${{ matrix.id }}.tar.gz" LICENSE THIRD_PARTY_NOTICES.md third-party

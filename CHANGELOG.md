@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Replace prebuilt FFmpeg/FFprobe npm packages with pinned official-source LGPL audio builds, with corresponding source and build information in every target release.
+
 - Minimal dark interface with centered blue Audiskope branding.
 - Improved spectrogram palettes, zoom, pan, cursor readout and logarithmic scale.
 - A/B comparison with shared axes and split view.

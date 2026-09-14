@@ -1,28 +1,38 @@
-# Release preparation
+# Builds and releases
 
-## Current binary blocker
+## Build the native audio tools
 
-The macOS arm64 FFmpeg executable installed during preparation reports: “This version of ffmpeg has nonfree parts compiled in. Therefore it is not legally redistributable.” Do not distribute the current local package. Replace that executable through a reproducible dependency/build change with a redistributable build, then regenerate notices and supply matching sources. `npm run release:check` rejects binaries reporting nonfree components; all normal packaging commands run it first. Passing this check is not proof of full license compliance.
+Use Node 22+ matching the machine architecture. The audio tools are built locally from unmodified official FFmpeg 8.0.1 source; no third-party binary installer is used.
 
-## Local verification
+- macOS: install Apple's Command Line Tools (`xcode-select --install`).
+- Ubuntu: install `build-essential curl xz-utils` using apt.
+- Windows x64: install MSYS2, then install `mingw-w64-x86_64-gcc make curl tar xz` in its MINGW64 environment. Run `bash scripts/build-audio.sh` in that shell. Run pnpm commands using Windows Node 22 x64.
 
-Use Node 22+ with the target architecture. Run `npm ci`, `npm run build`, `npm run typecheck`, `npm run test:native`, and `npm run test:ui` on a machine with a display. Test drag/drop, playback, A/B, PNG export and settings persistence manually in the packaged app too.
+```sh
+pnpm install --frozen-lockfile
+pnpm run build:audio
+pnpm run build
+pnpm run typecheck
+pnpm run test:native
+pnpm run test:ui
+pnpm run release:check
+pnpm run build:app
+```
 
-`npm run build:app` builds the current target and generates third-party notices. Explicit commands are `build:mac`, `build:win`, and `build:linux`; artifacts go into `release/`. Desktop icon assets are configured already. Local packaging commands do not publish. The GitHub release workflow publishes after all four target builds pass. Build natively for each OS/architecture; do not reuse another platform's node_modules.
+The first native build downloads a checksum-pinned source archive. Outputs are in `native/<platform>-<arch>`; intermediates are in `.native-build/`. Both are ignored by Git. Build again whenever the source pin or flags change. Build each target natively. `pnpm start` expects tools to have been built once.
 
-## Before publishing binaries
+The build disables autodetection, GPL, version3, nonfree and external codec libraries. Only local audio decoding plus a few built-in encoders for synthetic tests is enabled. No MP3 encoding is shipped; MP3 decoding uses a committed synthetic sample for regression checks. This configuration requires no purchased codec library. The previous nonfree binary dependency has been removed.
 
-- Set the intended version in package.json and package-lock.json; update CHANGELOG.md.
-- Review `third-party/inventory.json` from every target. Record the bundled FFmpeg/FFprobe hashes and configuration; inspect dependencies whose license text is absent from the npm archive.
-- Obtain and archive exact corresponding source for shipped FFmpeg/FFprobe binaries, their enabled libraries, patches and build scripts. Installer projects identify their binary suppliers; verify the source matches each recorded binary. Supply required Electron/component sources as applicable. Publish source materials beside the matching binary downloads, as required by their licenses. This repository does not yet contain those binary-source archives.
-- Include Audiskope source for the release tag and retain LICENSE and third-party notices in the package.
-- Review dependencies for known vulnerabilities before release, and test any updates. This preparation does not claim a security audit.
-- Sign/notarize macOS releases and sign Windows installers using your own credentials. Unsigned local packages are for testing; signing credentials are never committed.
-- Smoke-test the actual installer on every advertised OS/architecture. Check native decoder execution and licenses under the installed resources directory.
-- Create a GitHub release with the tested artifacts, matching sources, SHA-256 checksums, change notes and supported platforms. Publication is automated by the version workflow once every target succeeds.
+## Corresponding source and notices
 
-The CI workflow checks source builds and native decoding. The separate release workflow reads package.json on pushes to main, builds four native targets, then uploads all assets to a draft before publishing. It does not provide signing, installer smoke testing or matching third-party source archives. Resolve the binary/source prerequisites above before enabling successful binary publication.
+Each build produces `compliance/` with the exact source archive, SHA-256, unmodified-source declaration, upstream LICENSE.md, COPYING.LGPLv2.1, compiler information, configuration logs/flags and the build script. `pnpm run licenses` copies these into the generated notices together with binary hashes and Electron's original notices. The source is unmodified (no patches); use the included script from an Audiskope source checkout to reproduce the configuration. System compilers and build tools are prerequisites. Rebuilt FFmpeg/FFprobe executables can replace the files under installed `resources/audio-tools`.
 
-Use `npm version <version> --no-git-tag-version` to keep package.json and package-lock.json synchronized, then commit and push. Existing public release versions are skipped. Tags pointing at another commit are rejected; the workflow never moves a tag. Manual dispatch on main retries failures. Release jobs use read-only tokens except the final publication job, which has contents:write. Standard GitHub-hosted runners: ubuntu-24.04 x64, macos-15 arm64, macos-15-intel x64 and windows-2022 x64. See [runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+Every release includes `notices-<target>.tar.gz` containing these materials. The complete Audiskope source archive is uploaded too. Preserve these downloads with the installers. The runtime has no production npm package dependencies; development-tool notices in the inventory are informational. No licensing script can certify all legal or patent questions; review future dependencies and configuration changes.
 
-Licensing references: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html), [FFmpeg](https://ffmpeg.org/legal.html).
+## Automatic releases
+
+Use `pnpm run version:set <version>`, update CHANGELOG.md, commit and push to main. The release workflow builds Ubuntu x64 (AppImage/DEB), macOS arm64 and x64 (DMG), and Windows x64 (EXE). All native builds, tests and release checks must succeed. Each target must supply a source/notices archive. SHA-256 checksums are generated before a draft is populated and published. Existing public versions are skipped; tags are never moved. Prerelease versions become GitHub prereleases. Manual dispatch on main retries failures.
+
+The workflow uses the built-in GITHUB_TOKEN. No paid codec/library account or personal token secret is needed. GitHub Actions usage is subject to your account's plan and quotas. Installers are unsigned/unnotarized: signing and Apple notarization are not configured and can involve separate credentials/costs. Test actual installers on each OS before recommending a release to users.
+
+References: https://ffmpeg.org/legal.html and https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.

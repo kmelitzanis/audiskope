@@ -19,3 +19,6 @@ third-party/
 *.p12
 *.pfx
 *.pem
+
+native/
+.native-build/

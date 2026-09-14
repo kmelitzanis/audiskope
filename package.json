@@ -4,15 +4,15 @@
   "description": "Cross-platform Audio Visualizer with Spectrogram Analysis",
   "main": "dist/main/main.js",
   "scripts": {
-    "start": "npm run build && electron .",
-    "dev": "npm run build && electron . --enable-logging",
-    "build": "npm run build:main && npm run build:renderer",
+    "start": "pnpm run build && electron .",
+    "dev": "pnpm run build && electron . --enable-logging",
+    "build": "pnpm run build:main && pnpm run build:renderer",
     "build:main": "tsc -p tsconfig.main.json",
     "build:renderer": "node scripts/build-renderer.js",
-    "build:app": "npm run build && npm run release:check && electron-builder --publish never",
-    "build:mac": "npm run build && npm run release:check && electron-builder --mac --publish never",
-    "build:win": "npm run build && npm run release:check && electron-builder --win --publish never",
-    "build:linux": "npm run build && npm run release:check && electron-builder --linux --publish never",
+    "build:app": "pnpm run build && pnpm run release:check && electron-builder --publish never",
+    "build:mac": "pnpm run build && pnpm run release:check && electron-builder --mac --publish never",
+    "build:win": "pnpm run build && pnpm run release:check && electron-builder --win --publish never",
+    "build:linux": "pnpm run build && pnpm run release:check && electron-builder --linux --publish never",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:native": "node tests/native.cjs",
@@ -20,7 +20,9 @@
     "licenses": "node scripts/generate-notices.cjs",
     "icons": "python3 scripts/generate-icons.py",
     "release:check": "node scripts/generate-notices.cjs --check-release",
-    "test:release": "node --test tests/release.test.cjs"
+    "test:release": "node --test tests/release.test.cjs",
+    "build:audio": "bash scripts/build-audio.sh",
+    "version:set": "node scripts/set-version.cjs"
   },
   "keywords": [
     "audio",
@@ -37,10 +39,6 @@
     "electron": "^35.7.5",
     "electron-builder": "^24.9.0",
     "typescript": "^5.3.0"
-  },
-  "dependencies": {
-    "@ffprobe-installer/ffprobe": "2.1.2",
-    "ffmpeg-static": "5.2.0"
   },
   "build": {
     "appId": "com.audiskope.app",
@@ -69,6 +67,16 @@
       {
         "from": "assets/icons/desktop/png/512.png",
         "to": "icon.png"
+      },
+      {
+        "from": "native/${platform}-${arch}",
+        "to": "audio-tools",
+        "filter": [
+          "ffmpeg",
+          "ffprobe",
+          "ffmpeg.exe",
+          "ffprobe.exe"
+        ]
       }
     ],
     "mac": {
@@ -92,10 +100,6 @@
       "category": "Audio",
       "icon": "assets/icons/desktop/png"
     },
-    "asarUnpack": [
-      "node_modules/ffmpeg-static/**",
-      "node_modules/@ffprobe-installer/**"
-    ],
     "directories": {
       "output": "release",
       "buildResources": "assets/icons/desktop"
@@ -112,5 +116,11 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
   }
 }

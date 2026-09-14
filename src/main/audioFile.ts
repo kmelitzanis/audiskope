@@ -1,9 +1,9 @@
 import { execFile, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-const unpack = (p: string): string => p.replace(/app\.asar([/\\])/, 'app.asar.unpacked$1');
-const ffmpeg: string = unpack(require('ffmpeg-static'));
-const ffprobe: string = unpack(require('@ffprobe-installer/ffprobe').path);
+import { nativeTool } from './nativePaths';
+const ffmpeg = nativeTool('ffmpeg');
+const ffprobe = nativeTool('ffprobe');
 const MAX_PCM = 256 * 1024 * 1024;
 export async function readAudioFile(input: string) {
     if (typeof input !== 'string' || !path.isAbsolute(input))
