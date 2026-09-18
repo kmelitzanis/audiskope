@@ -60,3 +60,4 @@ First public release.
 - Builds pinned FFmpeg and FFprobe from official source using only built-in LGPL audio components, and ships that source, configuration and license texts with each release.
 - Publishes GPL-3.0-only project metadata with generated third-party notices.
 - Packages Linux AppImage and DEB, macOS arm64 and Intel x64 DMGs, and a Windows x64 EXE installer through desktop CI, with per-target notices, a project source archive and SHA-256 checksums.
+- Presents the macOS installer in the application palette, with the Audiskope mark, a retina background and the app icon as the volume icon.

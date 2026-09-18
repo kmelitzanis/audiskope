@@ -19,6 +19,7 @@
     "test:ui": "electron tests/ui.cjs",
     "licenses": "node scripts/generate-notices.cjs",
     "icons": "python3 scripts/generate-icons.py",
+    "dmg-background": "python3 scripts/generate-dmg-background.py",
     "release:check": "node scripts/generate-notices.cjs --check-release",
     "test:release": "node --test tests/release.test.cjs",
     "build:audio": "bash scripts/build-audio.sh",
@@ -88,6 +89,29 @@
         "dmg"
       ],
       "icon": "assets/icons/desktop/icon.icns"
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "assets/icons/desktop/icon.icns",
+      "background": "assets/dmg/background.png",
+      "iconSize": 112,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 196,
+          "type": "file"
+        },
+        {
+          "x": 390,
+          "y": 196,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "win": {
       "target": [

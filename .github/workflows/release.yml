@@ -145,7 +145,10 @@ jobs:
     permissions:
       contents: write
     env:
-      GH_TOKEN: ${{ github.token }}
+      # Falls back to the built-in token. Set a RELEASE_TOKEN secret (a PAT with
+      # the Contents scope) only if the repository cannot grant GITHUB_TOKEN
+      # write access to contents.
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
       RELEASE_TAG: ${{ needs.version.outputs.tag }}
       PRERELEASE: ${{ needs.version.outputs.prerelease }}
       RELEASE_SHA: ${{ github.sha }}
@@ -169,6 +172,16 @@ jobs:
           done
           git archive --format=tar.gz --prefix="Audiskope-${version}/" --output="release-assets/Audiskope-${version}-source.tar.gz" "$RELEASE_SHA"
           (cd release-assets && sha256sum * > SHA256SUMS.txt)
+      # A 403 when creating the release means the token was denied a permission
+      # this job requested. `push: false` means the repository Actions setting
+      # caps GITHUB_TOKEN at read-only (Settings -> Actions -> General ->
+      # Workflow permissions -> Read and write permissions). `push: true`
+      # instead points at a ruleset protecting the v* tag.
+      - name: Report effective token permissions
+        run: |
+          echo "Token repository permissions:"
+          gh api "repos/$GITHUB_REPOSITORY" --jq '.permissions' \
+            || echo "could not read permissions"
       - name: Create draft and upload complete assets before publishing
         shell: bash
         run: |
