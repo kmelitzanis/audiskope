@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+- Seals macOS bundles with an ad-hoc signature after packaging. electron-builder renames the Electron executable and adds resources, which invalidates the signature the downloaded Electron ships with, and Apple Silicon reports such a bundle as damaged; the app now launches once its quarantine attribute is cleared.
+- Builds every icon from supplied artwork in `assets/icons/variants/`, replacing the procedurally drawn mark.
+- Adds iOS appearance image sets for the dark, tinted and clear variants, and an Android adaptive foreground that keeps the artwork inside the safe zone.
+- Preserves transparency across the generated desktop, iOS, Android and web icons.
+- Documents opening an unsigned macOS build, including clearing the quarantine attribute.
+
 ## 1.1.0
 
 First public release.

@@ -1,17 +1,9 @@
 # Audiskope icons
 
-The existing blue equalizer mark on charcoal, without text for legibility at small sizes. Original project artwork; GPL-3.0-only.
+The six user-supplied PNG exports are preserved unchanged in `variants/`: Default, Dark, TintedDark, TintedLight, ClearDark and ClearLight.
 
-- `logo.svg`: editable vector reference; `app-icon-1024.png`: opaque master.
-- `desktop/`: macOS ICNS, Windows multi-size ICO, Linux PNG sizes; wired into electron-builder.
-- `ios/AppIcon.appiconset/`: iPhone/iPad/marketing PNGs and Xcode Contents.json. Drag into an asset catalog.
-- `android/res/`: legacy density icons, adaptive foreground/background and Android 13 monochrome layer. Copy into a future Android project's resources and set `android:icon="@mipmap/ic_launcher"`.
-- `android/play-store-512.png`: store artwork.
-- `web/`: favicon, touch/PWA sizes and a manifest fragment.
-- `../dmg/`: macOS installer window background at 1x and 2x, in the application palette.
+`pnpm run icons` uses Default.png as the master for desktop ICNS/ICO/PNG, web, Android raster icons and the iOS default catalog. It preserves the provided artwork and transparency. Python 3 and Pillow are required only to regenerate the committed exports.
 
-Mobile assets do not add mobile application support. iOS icons are opaque and unmasked; the OS supplies corner masks. Android adaptive artwork sits inside the central safe area.
+All six supplied appearances are available as separate image sets in `ios/Appearances.xcassets`. These are reusable assets, not automatic desktop theme switching. The desktop application uses Default. The supplied PNGs have their own rounded silhouette; they are preserved as supplied, not claimed to be validated App Store submission assets. Future native iOS releases should use the original Icon Composer project for platform-managed appearances and masks.
 
-Regenerate raster files with Python 3 and Pillow (`python3 -m pip install Pillow`, then `pnpm run icons`). Geometry is defined in `scripts/generate-icons.py`; keep the SVG and Android vector paths synchronized when changing the mark. The DMG background comes from `pnpm run dmg-background`; its icon slots must stay aligned with `build.dmg.contents` in package.json. Generated files are committed, so normal builds do not require Python.
-
-References: [Apple asset catalogs](https://developer.apple.com/documentation/xcode/configuring-your-app-icon), [Android adaptive icons](https://developer.android.com/develop/ui/views/launch/icon_design_adaptive).
+Android adaptive foreground uses the new Default artwork inside its safe area; its monochrome vector remains the equalizer symbol. The web manifest uses ordinary icons rather than applying a second adaptive mask. `logo.svg` remains the separate vector brand mark, not the raster app-icon master.

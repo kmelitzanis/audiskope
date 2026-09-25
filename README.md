@@ -43,6 +43,16 @@ This is a desktop Electron application. iOS and Android icon assets are included
 4. Select A or B to change the audible source. Split view displays both spectrograms.
 5. Use the player controls to listen and the PNG export action to save the visible analysis.
 
+## Opening an unsigned macOS build
+
+Released builds are ad-hoc signed but not signed with a Developer ID or notarized, so macOS quarantines them after download and refuses the first launch. Open the app once with **right-click (or Control-click) → Open**, then confirm in the dialog; macOS remembers the choice. If Finder still refuses, clear the quarantine attribute:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Audiskope.app
+```
+
+A build reported as *damaged* rather than *unverified* means its signature is invalid; report that, since every packaged bundle is sealed during the build.
+
 ## Development and packaging
 
 ```sh

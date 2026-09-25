@@ -1,6 +1,6 @@
 {
   "name": "audiskope",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Cross-platform Audio Visualizer with Spectrogram Analysis",
   "main": "dist/main/main.js",
   "scripts": {
@@ -127,6 +127,7 @@
       "category": "Audio",
       "icon": "assets/icons/desktop/png"
     },
+    "afterPack": "scripts/after-pack.cjs",
     "directories": {
       "output": "release",
       "buildResources": "assets/icons/desktop"
