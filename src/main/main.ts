@@ -22,7 +22,6 @@ function createWindow(): void {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
-      // No text input needs it, and it would download dictionaries at runtime.
       spellcheck: false
     },
     titleBarStyle: 'hiddenInset',
@@ -49,6 +48,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Nothing is typed into the app. Without languages, Windows and Linux do not
+  // download spell-check dictionaries from Google at startup.
+  session.defaultSession.setSpellCheckerEnabled(false);
+  session.defaultSession.setSpellCheckerLanguages([]);
   // Audio analysis needs no camera, microphone, notifications or other permissions.
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
