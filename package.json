@@ -13,7 +13,7 @@
     "build:mac": "pnpm run build && pnpm run release:check && electron-builder --mac --publish never",
     "build:win": "pnpm run build && pnpm run release:check && electron-builder --win --publish never",
     "build:linux": "pnpm run build && pnpm run release:check && electron-builder --linux --publish never",
-    "clean": "rm -rf dist",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:unit": "node --test \"tests/unit/*.test.mjs\"",
     "test:native": "node tests/native.cjs",
