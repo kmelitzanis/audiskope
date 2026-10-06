@@ -1,4 +1,6 @@
 import { SpectrumView } from './spectrumView';
+const UNIFORMS = ['uTexture', 'uColorScheme', 'uSampleRate', 'uView', 'uBins', 'uMaxFrequency', 'uTimeRatio', 'uDuration', 'uFrames'] as const;
+type UniformName = typeof UNIFORMS[number];
 // WebGL Spectrogram Renderer - GPU-accelerated spectrum visualization
 export class WebGLSpectrogramRenderer {
     private gl: WebGLRenderingContext;
@@ -6,11 +8,15 @@ export class WebGLSpectrogramRenderer {
     private texture: WebGLTexture | null = null;
     private positionBuffer: WebGLBuffer | null = null;
     private texCoordBuffer: WebGLBuffer | null = null;
-    private colorSchemeLocation: WebGLUniformLocation | null = null;
+    private uniforms = {} as Record<UniformName, WebGLUniformLocation | null>;
+    private positionLocation = -1;
+    private texCoordLocation = -1;
     private initialized = false;
     private bins = 1;
     private frames = 1;
-    constructor(private canvas: HTMLCanvasElement) {
+    private data: { frames: Float32Array[]; numFrames: number; bufferLength: number } | null = null;
+    /** `onRestored` runs after a lost context is rebuilt, so the caller can redraw. */
+    constructor(private canvas: HTMLCanvasElement, onRestored: () => void = () => {}) {
         const gl = canvas.getContext('webgl', {
             antialias: false,
             preserveDrawingBuffer: true,
@@ -21,6 +27,18 @@ export class WebGLSpectrogramRenderer {
         }
         this.gl = gl;
         this.init();
+        // GPU resets, driver updates and sleep can drop the context; rebuild it
+        // and re-upload the spectrum instead of leaving the plot blank.
+        canvas.addEventListener('webglcontextlost', event => {
+            event.preventDefault();
+            this.initialized = false;
+        });
+        canvas.addEventListener('webglcontextrestored', () => {
+            this.init();
+            if (this.data)
+                this.setData(this.data.frames, this.data.numFrames, this.data.bufferLength);
+            onRestored();
+        });
     }
     private init(): void {
         const gl = this.gl;
@@ -102,7 +120,10 @@ export class WebGLSpectrogramRenderer {
             throw new Error('Program link failed: ' + gl.getProgramInfoLog(program));
         }
         this.program = program;
-        this.colorSchemeLocation = gl.getUniformLocation(program, 'uColorScheme');
+        for (const name of UNIFORMS)
+            this.uniforms[name] = gl.getUniformLocation(program, name);
+        this.positionLocation = gl.getAttribLocation(program, 'aPosition');
+        this.texCoordLocation = gl.getAttribLocation(program, 'aTexCoord');
         // Create buffers
         const positions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
         const texCoords = new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]);
@@ -133,11 +154,16 @@ export class WebGLSpectrogramRenderer {
     resize(): void {
         const { width, height } = this.canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = width * dpr;
-        this.canvas.height = height * dpr;
-        this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        const pixelWidth = Math.max(1, Math.round(width * dpr)), pixelHeight = Math.max(1, Math.round(height * dpr));
+        // Assigning a canvas size reallocates its drawing buffer even when unchanged.
+        if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+            this.canvas.width = pixelWidth;
+            this.canvas.height = pixelHeight;
+        }
+        this.gl.viewport(0, 0, pixelWidth, pixelHeight);
     }
     setData(frames: Float32Array[], numFrames: number, bufferLength: number): void {
+        this.data = { frames, numFrames, bufferLength };
         if (!this.initialized)
             return;
         const gl = this.gl;
@@ -168,28 +194,27 @@ export class WebGLSpectrogramRenderer {
         gl.clearColor(0.05, 0.05, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(this.program);
-        gl.uniform1i(this.colorSchemeLocation, colorScheme);
-        gl.uniform1f(gl.getUniformLocation(this.program, 'uSampleRate'), sampleRate);
-        gl.uniform4f(gl.getUniformLocation(this.program, 'uView'), view.x0, view.x1, view.y0, view.y1);
-        gl.uniform1f(gl.getUniformLocation(this.program, 'uBins'), this.bins);
-        gl.uniform1f(gl.getUniformLocation(this.program, 'uMaxFrequency'), maxFrequency);
-        gl.uniform1f(gl.getUniformLocation(this.program, 'uTimeRatio'), timeRatio);
-        gl.uniform1f(gl.getUniformLocation(this.program, 'uDuration'), duration);
-        gl.uniform1f(gl.getUniformLocation(this.program, 'uFrames'), this.frames);
+        const u = this.uniforms;
+        gl.uniform1i(u.uColorScheme, colorScheme);
+        gl.uniform1f(u.uSampleRate, sampleRate);
+        gl.uniform4f(u.uView, view.x0, view.x1, view.y0, view.y1);
+        gl.uniform1f(u.uBins, this.bins);
+        gl.uniform1f(u.uMaxFrequency, maxFrequency);
+        gl.uniform1f(u.uTimeRatio, timeRatio);
+        gl.uniform1f(u.uDuration, duration);
+        gl.uniform1f(u.uFrames, this.frames);
         // Position attribute
-        const posLoc = gl.getAttribLocation(this.program, 'aPosition');
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this.positionLocation);
+        gl.vertexAttribPointer(this.positionLocation, 2, gl.FLOAT, false, 0, 0);
         // TexCoord attribute
-        const texLoc = gl.getAttribLocation(this.program, 'aTexCoord');
         gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
-        gl.enableVertexAttribArray(texLoc);
-        gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this.texCoordLocation);
+        gl.vertexAttribPointer(this.texCoordLocation, 2, gl.FLOAT, false, 0, 0);
         // Texture
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
-        gl.uniform1i(gl.getUniformLocation(this.program, 'uTexture'), 0);
+        gl.uniform1i(u.uTexture, 0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     destroy(): void {

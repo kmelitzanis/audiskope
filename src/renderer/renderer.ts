@@ -99,8 +99,8 @@ function init(): void {
     updatePalette();
     // Initialize WebGL renderer
     try {
-        glRenderer = new WebGLSpectrogramRenderer(elements.spectrogramCanvas);
-        comparisonRenderer = new WebGLSpectrogramRenderer(document.getElementById('comparison-canvas') as HTMLCanvasElement);
+        glRenderer = new WebGLSpectrogramRenderer(elements.spectrogramCanvas, renderSpectrogram);
+        comparisonRenderer = new WebGLSpectrogramRenderer(document.getElementById('comparison-canvas') as HTMLCanvasElement, renderSpectrogram);
     }
     catch (e) {
         console.error('WebGL not supported:', e);
@@ -438,15 +438,11 @@ function drawWaveform(): void {
 function handleResize(): void {
     if (!elements)
         return;
+    // The WebGL renderers size their own canvases when they draw.
     const waveformSection = elements.waveformCanvas?.parentElement;
-    const spectrogramSection = elements.spectrogramCanvas?.parentElement;
     if (waveformSection && elements.waveformCanvas) {
         elements.waveformCanvas.width = Math.round(waveformSection.clientWidth * (window.devicePixelRatio || 1));
         elements.waveformCanvas.height = Math.round(waveformSection.clientHeight * (window.devicePixelRatio || 1));
-    }
-    if (spectrogramSection && elements.spectrogramCanvas) {
-        elements.spectrogramCanvas.width = spectrogramSection.clientWidth;
-        elements.spectrogramCanvas.height = spectrogramSection.clientHeight;
     }
     if (audioBuffer) {
         drawWaveform();
@@ -477,7 +473,7 @@ function play(): void {
     if (!audioContext || !audioBuffer)
         return;
     if (audioContext.state === 'suspended') {
-        audioContext.resume();
+        audioContext.resume().catch(error => console.error('Could not resume audio output:', error));
     }
     if (pauseTime >= audioBuffer.duration)
         pauseTime = 0;
@@ -543,14 +539,10 @@ function updatePlayback(): void {
     if (!isPlaying || !audioBuffer || !audioContext)
         return;
     const current = audioContext.currentTime - startTime;
-    const progress = (current / audioBuffer.duration) * 100;
     if (current >= audioBuffer.duration) {
         stop();
         return;
     }
-    elements.timeline.value = String(progress);
-    elements.timelineProgress.style.width = `${progress}%`;
-    elements.waveformOverlay.style.width = `${progress}%`;
     updateTimeDisplay(current);
     animationId = requestAnimationFrame(updatePlayback);
 }
@@ -757,7 +749,7 @@ function saveImage(): void {
     ctx.fillStyle = '#697682';
     ctx.fillText(settings.colorScheme === '3band' ? 'AUDISKOPE / TRI-BAND INTENSITY: BLUE / ORANGE / WHITE' : 'AUDISKOPE / AUDIO SPECTRUM ANALYZER', 64, 944);
     const link = document.createElement('a');
-    link.download = `${elements.fileName.textContent || 'audiskope'}-spectrum.png`;
+    link.download = `${(elements.fileName.textContent || 'audiskope').replace(/\.[^.]+$/, '')}-spectrum.png`;
     link.href = output.toDataURL('image/png');
     link.click();
 }
