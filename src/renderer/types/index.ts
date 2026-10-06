@@ -19,12 +19,7 @@ export interface FileData {
 export interface ElectronAPI {
     openFileDialog: () => Promise<string | null>;
     readFile: (filePath: string) => Promise<FileData>;
-    getDroppedFilePath: (file: File) => string;
-    window: {
-        minimize: () => Promise<void>;
-        maximize: () => Promise<void>;
-        close: () => Promise<void>;
-    };
+    readDroppedFile: (file: File) => Promise<FileData>;
 }
 export interface SpectrogramData {
     frames: Float32Array[];

@@ -1,6 +1,7 @@
 # Architecture
 
-- `src/main/main.ts`: Electron lifecycle, native dialogs and IPC.
+- `src/main/main.ts`: Electron lifecycle and window hardening (sandbox, no navigation, popups or permissions).
+- `src/main/ipc.ts`: IPC handlers. Only the app page may call them, and it can only read files the user opened or dropped.
 - `src/main/audioFile.ts`: FFprobe metadata and bounded FFmpeg PCM decoding at the original sample rate.
 - `src/main/preload.ts`: isolated renderer bridge, including native drop paths.
 - `src/renderer/renderer.ts`: controls, playback, A/B state and persisted preferences.

@@ -1,5 +1,5 @@
 import { SpectrumView, fullView, frequencyAt, zoomRange, panRange, clamp, preciseTime } from './utils/spectrumView';
-import { AppSettings, ColorScheme, SpectrogramData, AudioMetadata } from './types';
+import { AppSettings, ColorScheme, SpectrogramData, AudioMetadata, FileData } from './types';
 import { processWaveform, WaveformBands } from './utils/waveformProcessor';
 import { sampleScheme, rampStops, WAVEFORM_STOPS } from './utils/palette';
 import { formatTime } from './utils/helpers';
@@ -212,7 +212,7 @@ async function openFile(target: SlotKey = activeSlot): Promise<void> {
         const filePath = await window.api.openFileDialog();
         console.log('Selected file:', filePath);
         if (filePath) {
-            await loadAudioFile(filePath, target);
+            await loadAudio(() => window.api.readFile(filePath), target);
         }
     }
     catch (error) {
@@ -223,34 +223,22 @@ async function handleFileDrop(e: DragEvent): Promise<void> {
     e.preventDefault();
     e.stopPropagation();
     elements.dropZone.classList.remove('drag-over');
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-        try {
-            const paths = Array.from(files).slice(0, comparisonMode ? 2 : 1).map(file => window.api.getDroppedFilePath(file));
-            const target = e.target instanceof Element ? e.target : null;
-            const key: SlotKey = target?.closest('#slot-b') ? 'B' : target?.closest('#slot-a') ? 'A' : target?.closest('#comparison-section') ? otherKey() : activeSlot;
-            if (paths[0]) {
-                await loadAudioFile(paths[0], paths.length > 1 ? 'A' : key);
-                if (paths[1])
-                    await loadAudioFile(paths[1], 'B');
-            }
-            else {
-                document.getElementById('status')!.textContent = 'Drop an audio file from Finder or use Open file.';
-            }
-        }
-        catch (error) {
-            console.error('Could not access dropped file:', error);
-            document.getElementById('status')!.textContent = 'Could not open the dropped file. Try Open file.';
-        }
-    }
+    const files = Array.from(e.dataTransfer?.files || []).slice(0, comparisonMode ? 2 : 1);
+    if (!files.length)
+        return;
+    const target = e.target instanceof Element ? e.target : null;
+    const key: SlotKey = target?.closest('#slot-b') ? 'B' : target?.closest('#slot-a') ? 'A' : target?.closest('#comparison-section') ? otherKey() : activeSlot;
+    await loadAudio(() => window.api.readDroppedFile(files[0]), files.length > 1 ? 'A' : key);
+    if (files[1])
+        await loadAudio(() => window.api.readDroppedFile(files[1]), 'B');
 }
-async function loadAudioFile(filePath: string, target: SlotKey = activeSlot): Promise<void> {
+async function loadAudio(read: () => Promise<FileData>, target: SlotKey = activeSlot): Promise<void> {
     if (isProcessing || isLoading)
         return;
     isLoading = true;
     showLoading(true);
     try {
-        const fileData = await window.api.readFile(filePath);
+        const fileData = await read();
         if (!audioContext)
             audioContext = new AudioContext();
         const meta = fileData.metadata, samples = new Float32Array(fileData.buffer);
