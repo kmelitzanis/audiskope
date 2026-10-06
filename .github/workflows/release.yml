@@ -182,14 +182,17 @@ jobs:
           echo "Token repository permissions:"
           gh api "repos/$GITHUB_REPOSITORY" --jq '.permissions' \
             || echo "could not read permissions"
+      # The release body is this version's CHANGELOG.md section, followed by
+      # GitHub's generated list of changes and the full comparison link.
       - name: Create draft and upload complete assets before publishing
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/release-notes.cjs "${RELEASE_TAG#v}" > "$RUNNER_TEMP/release-notes.md"
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             args=()
             if [ "$PRERELEASE" = true ]; then args+=(--prerelease); fi
-            gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "Audiskope $RELEASE_TAG" --draft --generate-notes "${args[@]}"
+            gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "Audiskope $RELEASE_TAG" --draft --notes-file "$RUNNER_TEMP/release-notes.md" --generate-notes "${args[@]}"
           fi
           gh release upload "$RELEASE_TAG" release-assets/* --clobber
           gh release edit "$RELEASE_TAG" --draft=false
