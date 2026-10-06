@@ -16,6 +16,7 @@ const path = require('node:path');
  * attribute and Gatekeeper still blocks it until the user allows it.
  */
 exports.default = async function afterPack(context) {
+  await flipSecurityFuses(context);
   if (context.electronPlatformName !== 'darwin') return;
 
   const app = path.join(
@@ -38,3 +39,28 @@ exports.default = async function afterPack(context) {
   sign(app, ['--deep', '--identifier', context.packager.appInfo.id]);
   console.log(`  • ad-hoc signed ${path.basename(app)}`);
 };
+
+/**
+ * Turn off Electron features the app never uses, so the packaged binary cannot
+ * be repurposed as a Node runtime (ELECTRON_RUN_AS_NODE, NODE_OPTIONS,
+ * --inspect) and only loads the app from app.asar. File protocol privileges
+ * stay on: the renderer loads its modules and workers over file://. This runs
+ * before macOS signing, so the signature covers the modified binary.
+ */
+async function flipSecurityFuses(context) {
+  const { flipFuses, FuseVersion, FuseV1Options } = await import('@electron/fuses');
+  const { productFilename } = context.packager.appInfo;
+  const binary = {
+    darwin: `${productFilename}.app`,
+    win32: `${productFilename}.exe`,
+    linux: context.packager.executableName
+  }[context.electronPlatformName];
+  await flipFuses(path.join(context.appOutDir, binary), {
+    version: FuseVersion.V1,
+    [FuseV1Options.RunAsNode]: false,
+    [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+    [FuseV1Options.EnableNodeCliInspectArguments]: false,
+    [FuseV1Options.OnlyLoadAppFromAsar]: true
+  });
+  console.log(`  • flipped Electron security fuses in ${binary}`);
+}

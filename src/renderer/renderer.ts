@@ -1,9 +1,9 @@
 import { SpectrumView, fullView, frequencyAt, zoomRange, panRange, clamp, preciseTime } from './utils/spectrumView';
-import { AppSettings, ColorScheme, SpectrogramData, AudioMetadata } from './types';
+import { AppSettings, ColorScheme, SpectrogramData, AudioMetadata, FileData } from './types';
 import { processWaveform, WaveformBands } from './utils/waveformProcessor';
 import { sampleScheme, rampStops, WAVEFORM_STOPS } from './utils/palette';
 import { formatTime } from './utils/helpers';
-import { FFTProcessor } from './utils/fftProcessor';
+import { analyzeSpectrum } from './utils/fftProcessor';
 import { WebGLSpectrogramRenderer } from './utils/webglRenderer';
 // State
 let audioContext: AudioContext | null = null;
@@ -38,7 +38,6 @@ function splitEnabled(): boolean { return comparisonMode && !!slots.A && !!slots
 function displayDuration(): number { return splitEnabled() ? Math.max(slots.A!.buffer.duration, slots.B!.buffer.duration) : audioBuffer?.duration || 1; }
 function displayNyquist(): number { return splitEnabled() ? Math.max(slots.A!.buffer.sampleRate, slots.B!.buffer.sampleRate) / 2 : (audioBuffer?.sampleRate || 48000) / 2; }
 // Processors
-let fftProcessor: FFTProcessor | null = null;
 let glRenderer: WebGLSpectrogramRenderer | null = null;
 // Settings
 const settings: AppSettings = {
@@ -98,15 +97,14 @@ function init(): void {
     elements.fftSelect.value = String(settings.fftSize);
     elements.colorSelect.value = settings.colorScheme;
     updatePalette();
-    // Initialize FFT processor
-    fftProcessor = new FFTProcessor();
     // Initialize WebGL renderer
     try {
-        glRenderer = new WebGLSpectrogramRenderer(elements.spectrogramCanvas);
-        comparisonRenderer = new WebGLSpectrogramRenderer(document.getElementById('comparison-canvas') as HTMLCanvasElement);
+        glRenderer = new WebGLSpectrogramRenderer(elements.spectrogramCanvas, renderSpectrogram);
+        comparisonRenderer = new WebGLSpectrogramRenderer(document.getElementById('comparison-canvas') as HTMLCanvasElement, renderSpectrogram);
     }
     catch (e) {
         console.error('WebGL not supported:', e);
+        document.getElementById('status')!.textContent = 'WebGL is unavailable, so the spectrogram cannot be drawn.';
     }
     setupEventListeners();
     handleResize();
@@ -212,7 +210,7 @@ async function openFile(target: SlotKey = activeSlot): Promise<void> {
         const filePath = await window.api.openFileDialog();
         console.log('Selected file:', filePath);
         if (filePath) {
-            await loadAudioFile(filePath, target);
+            await loadAudio(() => window.api.readFile(filePath), target);
         }
     }
     catch (error) {
@@ -223,34 +221,22 @@ async function handleFileDrop(e: DragEvent): Promise<void> {
     e.preventDefault();
     e.stopPropagation();
     elements.dropZone.classList.remove('drag-over');
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-        try {
-            const paths = Array.from(files).slice(0, comparisonMode ? 2 : 1).map(file => window.api.getDroppedFilePath(file));
-            const target = e.target instanceof Element ? e.target : null;
-            const key: SlotKey = target?.closest('#slot-b') ? 'B' : target?.closest('#slot-a') ? 'A' : target?.closest('#comparison-section') ? otherKey() : activeSlot;
-            if (paths[0]) {
-                await loadAudioFile(paths[0], paths.length > 1 ? 'A' : key);
-                if (paths[1])
-                    await loadAudioFile(paths[1], 'B');
-            }
-            else {
-                document.getElementById('status')!.textContent = 'Drop an audio file from Finder or use Open file.';
-            }
-        }
-        catch (error) {
-            console.error('Could not access dropped file:', error);
-            document.getElementById('status')!.textContent = 'Could not open the dropped file. Try Open file.';
-        }
-    }
+    const files = Array.from(e.dataTransfer?.files || []).slice(0, comparisonMode ? 2 : 1);
+    if (!files.length)
+        return;
+    const target = e.target instanceof Element ? e.target : null;
+    const key: SlotKey = target?.closest('#slot-b') ? 'B' : target?.closest('#slot-a') ? 'A' : target?.closest('#comparison-section') ? otherKey() : activeSlot;
+    await loadAudio(() => window.api.readDroppedFile(files[0]), files.length > 1 ? 'A' : key);
+    if (files[1])
+        await loadAudio(() => window.api.readDroppedFile(files[1]), 'B');
 }
-async function loadAudioFile(filePath: string, target: SlotKey = activeSlot): Promise<void> {
+async function loadAudio(read: () => Promise<FileData>, target: SlotKey = activeSlot): Promise<void> {
     if (isProcessing || isLoading)
         return;
     isLoading = true;
     showLoading(true);
     try {
-        const fileData = await window.api.readFile(filePath);
+        const fileData = await read();
         if (!audioContext)
             audioContext = new AudioContext();
         const meta = fileData.metadata, samples = new Float32Array(fileData.buffer);
@@ -261,7 +247,7 @@ async function loadAudioFile(filePath: string, target: SlotKey = activeSlot): Pr
             for (let i = 0; i < frames; i++)
                 output[i] = samples[i * meta.channels + c];
         }
-        const [waveform, spectrum] = await Promise.all([processWaveform(decoded.getChannelData(0), decoded.sampleRate), fftProcessor!.process(decoded.getChannelData(0), settings.fftSize)]);
+        const [waveform, spectrum] = await Promise.all([processWaveform(decoded.getChannelData(0), decoded.sampleRate), analyzeSpectrum(decoded.getChannelData(0), settings.fftSize)]);
         stop();
         slots[target] = { name: fileData.name, buffer: decoded, metadata: meta, waveform, spectrum, fftSize: settings.fftSize };
         activeSlot = target;
@@ -343,7 +329,7 @@ function selectSlot(key: SlotKey): void {
         play();
 }
 async function processSpectrogram(): Promise<void> {
-    if (!audioBuffer || !fftProcessor || isProcessing)
+    if (!audioBuffer || isProcessing)
         return;
     isProcessing = true;
     showLoading(true);
@@ -354,7 +340,7 @@ async function processSpectrogram(): Promise<void> {
         }[] = [];
         for (const slot of [slots.A, slots.B])
             if (slot)
-                staged.push({ slot, spectrum: await fftProcessor.process(slot.buffer.getChannelData(0), settings.fftSize) });
+                staged.push({ slot, spectrum: await analyzeSpectrum(slot.buffer.getChannelData(0), settings.fftSize) });
         for (const item of staged) {
             item.slot.spectrum = item.spectrum;
             item.slot.fftSize = settings.fftSize;
@@ -453,15 +439,11 @@ function drawWaveform(): void {
 function handleResize(): void {
     if (!elements)
         return;
+    // The WebGL renderers size their own canvases when they draw.
     const waveformSection = elements.waveformCanvas?.parentElement;
-    const spectrogramSection = elements.spectrogramCanvas?.parentElement;
     if (waveformSection && elements.waveformCanvas) {
         elements.waveformCanvas.width = Math.round(waveformSection.clientWidth * (window.devicePixelRatio || 1));
         elements.waveformCanvas.height = Math.round(waveformSection.clientHeight * (window.devicePixelRatio || 1));
-    }
-    if (spectrogramSection && elements.spectrogramCanvas) {
-        elements.spectrogramCanvas.width = spectrogramSection.clientWidth;
-        elements.spectrogramCanvas.height = spectrogramSection.clientHeight;
     }
     if (audioBuffer) {
         drawWaveform();
@@ -492,7 +474,7 @@ function play(): void {
     if (!audioContext || !audioBuffer)
         return;
     if (audioContext.state === 'suspended') {
-        audioContext.resume();
+        audioContext.resume().catch(error => console.error('Could not resume audio output:', error));
     }
     if (pauseTime >= audioBuffer.duration)
         pauseTime = 0;
@@ -558,14 +540,10 @@ function updatePlayback(): void {
     if (!isPlaying || !audioBuffer || !audioContext)
         return;
     const current = audioContext.currentTime - startTime;
-    const progress = (current / audioBuffer.duration) * 100;
     if (current >= audioBuffer.duration) {
         stop();
         return;
     }
-    elements.timeline.value = String(progress);
-    elements.timelineProgress.style.width = `${progress}%`;
-    elements.waveformOverlay.style.width = `${progress}%`;
     updateTimeDisplay(current);
     animationId = requestAnimationFrame(updatePlayback);
 }
@@ -772,7 +750,7 @@ function saveImage(): void {
     ctx.fillStyle = '#697682';
     ctx.fillText(settings.colorScheme === '3band' ? 'AUDISKOPE / TRI-BAND INTENSITY: BLUE / ORANGE / WHITE' : 'AUDISKOPE / AUDIO SPECTRUM ANALYZER', 64, 944);
     const link = document.createElement('a');
-    link.download = `${elements.fileName.textContent || 'audiskope'}-spectrum.png`;
+    link.download = `${(elements.fileName.textContent || 'audiskope').replace(/\.[^.]+$/, '')}-spectrum.png`;
     link.href = output.toDataURL('image/png');
     link.click();
 }

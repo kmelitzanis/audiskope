@@ -14,6 +14,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -35,6 +37,8 @@ jobs:
         run: bash scripts/build-audio.sh
       - run: pnpm run build
       - run: pnpm run typecheck
+      - run: pnpm run test:unit
+      - run: pnpm run test:release
       - run: pnpm run test:native
       - run: pnpm run licenses
       - uses: actions/upload-artifact@v4

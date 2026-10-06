@@ -1,8 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, session } from 'electron';
 import * as path from 'path';
-import { readAudioFile } from './audioFile';
+import { INDEX_HTML, registerIpcHandlers } from './ipc';
 
 let mainWindow: BrowserWindow | null = null;
+
+// Chromium no longer falls back to software WebGL by itself, which would leave
+// systems without GPU acceleration with no spectrogram. The window only shows
+// this app's own local page, so its shaders are trusted content.
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -16,15 +21,20 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      spellcheck: false
     },
     titleBarStyle: 'hiddenInset',
     show: false
   });
 
-  mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
+  // The app is a single local page: never navigate away or open other windows.
+  mainWindow.webContents.on('will-navigate', event => event.preventDefault());
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
-  if (process.argv.includes('--enable-logging')) {
+  mainWindow.loadFile(INDEX_HTML);
+
+  if (!app.isPackaged && process.argv.includes('--enable-logging')) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -37,7 +47,16 @@ function createWindow(): void {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Nothing is typed into the app. Without languages, Windows and Linux do not
+  // download spell-check dictionaries from Google at startup.
+  session.defaultSession.setSpellCheckerEnabled(false);
+  session.defaultSession.setSpellCheckerLanguages([]);
+  // Audio analysis needs no camera, microphone, notifications or other permissions.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -51,33 +70,4 @@ app.on('activate', () => {
   }
 });
 
-// IPC: Open file dialog
-ipcMain.handle('dialog:openFile', async () => {
-  if (!mainWindow) return null;
-
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: [
-      { name: 'Audio Files', extensions: ['mp3', 'wav', 'flac', 'm4a', 'ogg', 'aac', 'webm', 'aif', 'aiff', 'aifc', 'alac', 'opus', 'oga', 'caf', 'wma', 'ape', 'wv', 'mp4'] },
-      { name: 'All Files', extensions: ['*'] }
-    ]
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    return result.filePaths[0];
-  }
-  return null;
-});
-
-ipcMain.handle('file:read', (_event, filePath: string) => readAudioFile(filePath));
-
-// Window controls
-ipcMain.handle('window:minimize', () => mainWindow?.minimize());
-ipcMain.handle('window:maximize', () => {
-  if (mainWindow?.isMaximized()) {
-    mainWindow.unmaximize();
-  } else {
-    mainWindow?.maximize();
-  }
-});
-ipcMain.handle('window:close', () => mainWindow?.close());
+registerIpcHandlers();

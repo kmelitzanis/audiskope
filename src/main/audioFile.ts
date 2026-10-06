@@ -8,11 +8,12 @@ const MAX_PCM = 256 * 1024 * 1024;
 export async function readAudioFile(input: string) {
     if (typeof input !== 'string' || !path.isAbsolute(input))
         throw new Error('Select a local audio file.');
-    const filePath = path.resolve(input), stat = await fs.promises.stat(filePath);
+    const filePath = path.resolve(input);
+    const stat = await fs.promises.stat(filePath).catch(() => { throw new Error('The file could not be found or opened.'); });
     if (!stat.isFile())
         throw new Error('Select a file, not a folder.');
     const info = JSON.parse(await new Promise<string>((resolve, reject) => {
-        execFile(ffprobe, ['-v', 'error', '-protocol_whitelist', 'file,pipe', '-select_streams', 'a:0', '-show_streams', '-show_format', '-of', 'json', filePath], { timeout: 30000, maxBuffer: 4 * 1024 * 1024, windowsHide: true }, (e, stdout) => e ? reject(new Error('Could not read this audio format or the file is damaged.')) : resolve(stdout));
+        execFile(ffprobe, ['-v', 'error', '-protocol_whitelist', 'file,pipe', '-select_streams', 'a:0', '-show_streams', '-show_format', '-of', 'json', filePath], { timeout: 30000, maxBuffer: 4 * 1024 * 1024, windowsHide: true }, (e, stdout) => e ? reject(new Error((e as NodeJS.ErrnoException).code === 'ENOENT' ? 'The bundled audio decoder could not start.' : 'Could not read this audio format or the file is damaged.')) : resolve(stdout));
     }));
     const stream = info.streams?.[0];
     if (!stream)
