@@ -3,7 +3,7 @@ import { AppSettings, ColorScheme, SpectrogramData, AudioMetadata, FileData } fr
 import { processWaveform, WaveformBands } from './utils/waveformProcessor';
 import { sampleScheme, rampStops, WAVEFORM_STOPS } from './utils/palette';
 import { formatTime } from './utils/helpers';
-import { FFTProcessor } from './utils/fftProcessor';
+import { analyzeSpectrum } from './utils/fftProcessor';
 import { WebGLSpectrogramRenderer } from './utils/webglRenderer';
 // State
 let audioContext: AudioContext | null = null;
@@ -38,7 +38,6 @@ function splitEnabled(): boolean { return comparisonMode && !!slots.A && !!slots
 function displayDuration(): number { return splitEnabled() ? Math.max(slots.A!.buffer.duration, slots.B!.buffer.duration) : audioBuffer?.duration || 1; }
 function displayNyquist(): number { return splitEnabled() ? Math.max(slots.A!.buffer.sampleRate, slots.B!.buffer.sampleRate) / 2 : (audioBuffer?.sampleRate || 48000) / 2; }
 // Processors
-let fftProcessor: FFTProcessor | null = null;
 let glRenderer: WebGLSpectrogramRenderer | null = null;
 // Settings
 const settings: AppSettings = {
@@ -98,8 +97,6 @@ function init(): void {
     elements.fftSelect.value = String(settings.fftSize);
     elements.colorSelect.value = settings.colorScheme;
     updatePalette();
-    // Initialize FFT processor
-    fftProcessor = new FFTProcessor();
     // Initialize WebGL renderer
     try {
         glRenderer = new WebGLSpectrogramRenderer(elements.spectrogramCanvas);
@@ -249,7 +246,7 @@ async function loadAudio(read: () => Promise<FileData>, target: SlotKey = active
             for (let i = 0; i < frames; i++)
                 output[i] = samples[i * meta.channels + c];
         }
-        const [waveform, spectrum] = await Promise.all([processWaveform(decoded.getChannelData(0), decoded.sampleRate), fftProcessor!.process(decoded.getChannelData(0), settings.fftSize)]);
+        const [waveform, spectrum] = await Promise.all([processWaveform(decoded.getChannelData(0), decoded.sampleRate), analyzeSpectrum(decoded.getChannelData(0), settings.fftSize)]);
         stop();
         slots[target] = { name: fileData.name, buffer: decoded, metadata: meta, waveform, spectrum, fftSize: settings.fftSize };
         activeSlot = target;
@@ -331,7 +328,7 @@ function selectSlot(key: SlotKey): void {
         play();
 }
 async function processSpectrogram(): Promise<void> {
-    if (!audioBuffer || !fftProcessor || isProcessing)
+    if (!audioBuffer || isProcessing)
         return;
     isProcessing = true;
     showLoading(true);
@@ -342,7 +339,7 @@ async function processSpectrogram(): Promise<void> {
         }[] = [];
         for (const slot of [slots.A, slots.B])
             if (slot)
-                staged.push({ slot, spectrum: await fftProcessor.process(slot.buffer.getChannelData(0), settings.fftSize) });
+                staged.push({ slot, spectrum: await analyzeSpectrum(slot.buffer.getChannelData(0), settings.fftSize) });
         for (const item of staged) {
             item.slot.spectrum = item.spectrum;
             item.slot.fftSize = settings.fftSize;
