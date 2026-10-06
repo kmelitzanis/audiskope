@@ -20,6 +20,8 @@ function scan(dir) {
  }
 }
 scan(path.join(root,'node_modules'));
+// Electron 44+ downloads its binary on first use; resolving it fills node_modules/electron/dist.
+require('electron');
 for (const file of ['LICENSE','LICENSES.chromium.html']) fs.copyFileSync(path.join(root,'node_modules/electron/dist',file),path.join(out,'Electron-'+file));
 const binaries={};
 for(const [name,binary] of [['ffmpeg',require('../dist/main/nativePaths').nativeTool('ffmpeg')],['ffprobe',require('../dist/main/nativePaths').nativeTool('ffprobe')]]) {

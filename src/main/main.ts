@@ -4,6 +4,11 @@ import { INDEX_HTML, registerIpcHandlers } from './ipc';
 
 let mainWindow: BrowserWindow | null = null;
 
+// Chromium no longer falls back to software WebGL by itself, which would leave
+// systems without GPU acceleration with no spectrogram. The window only shows
+// this app's own local page, so its shaders are trusted content.
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     icon: app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : path.join(__dirname, '../../assets/icons/desktop/png/512.png'),

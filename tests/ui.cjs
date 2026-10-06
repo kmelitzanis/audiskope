@@ -1,8 +1,8 @@
 const {app,BrowserWindow}=require('electron');const path=require('path'),fs=require('fs'),assert=require('assert');const {registerIpcHandlers}=require('../dist/main/ipc');
-app.setPath('userData',path.join(__dirname,'profile'));const root=path.resolve(__dirname,'..'),fixtures=path.join(__dirname,'fixtures');let nextFile='source.aiff';
+app.setPath('userData',path.join(__dirname,'profile'));app.commandLine.appendSwitch('enable-unsafe-swiftshader');const root=path.resolve(__dirname,'..'),fixtures=path.join(__dirname,'fixtures');let nextFile='source.aiff';
 registerIpcHandlers(async()=>({canceled:false,filePaths:[path.join(fixtures,nextFile)]}));
 app.whenReady().then(async()=>{try{
-const win=new BrowserWindow({show:false,width:1280,height:900,webPreferences:{preload:path.join(root,'dist/main/preload.js')}});win.webContents.on('console-message',(_,l,m)=>{if(l>1)console.log('RENDERER',m)});
+const win=new BrowserWindow({show:false,width:1280,height:900,webPreferences:{preload:path.join(root,'dist/main/preload.js')}});win.webContents.on('console-message',e=>{if(e.level==='warning'||e.level==='error')console.log('RENDERER',e.message)});
 await win.loadFile(path.join(root,'src/renderer/index.html'));const run=s=>win.webContents.executeJavaScript(s);
 const click=id=>run(`document.getElementById('${id}').click()`);
 const ready=async()=>{for(let i=0;i<300;i++){await new Promise(r=>setTimeout(r,100));if(await run("document.getElementById('loading-indicator').style.display==='none'"))return;}throw Error('UI loading timed out');};

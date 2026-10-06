@@ -104,6 +104,7 @@ function init(): void {
     }
     catch (e) {
         console.error('WebGL not supported:', e);
+        document.getElementById('status')!.textContent = 'WebGL is unavailable, so the spectrogram cannot be drawn.';
     }
     setupEventListeners();
     handleResize();
