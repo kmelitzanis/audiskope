@@ -19,4 +19,6 @@ function compile(directory) {
   }
 }
 compile(root);
+// Lets Node import these browser modules in unit tests; browsers ignore it.
+fs.writeFileSync('dist/renderer/package.json', '{ "type": "module" }\n');
 console.log('Renderer compiled successfully.');

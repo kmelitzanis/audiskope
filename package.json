@@ -15,6 +15,7 @@
     "build:linux": "pnpm run build && pnpm run release:check && electron-builder --linux --publish never",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
     "test:native": "node tests/native.cjs",
     "test:ui": "electron tests/ui.cjs",
     "licenses": "node scripts/generate-notices.cjs",

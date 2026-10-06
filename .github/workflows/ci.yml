@@ -35,6 +35,8 @@ jobs:
         run: bash scripts/build-audio.sh
       - run: pnpm run build
       - run: pnpm run typecheck
+      - run: pnpm run test:unit
+      - run: pnpm run test:release
       - run: pnpm run test:native
       - run: pnpm run licenses
       - uses: actions/upload-artifact@v4
