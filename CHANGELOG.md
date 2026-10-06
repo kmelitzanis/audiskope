@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- Upgrades Electron from 35, which no longer receives security fixes, to 44. macOS builds now require macOS 12 or later.
+- Runs the window in Electron's renderer sandbox, blocks navigation, pop-up windows and permission requests, and opens DevTools only in development.
+- Accepts requests to the main process only from the app's own page, and reads only files the user opened in the file dialog or dropped onto the window.
+- Removes `blob:` and `unsafe-inline` from the Content Security Policy by loading the analysis workers from module files.
+- Disables Electron features the app never uses in packaged builds (running as Node, `NODE_OPTIONS`, `--inspect`, loading code outside `app.asar`), and stops shipping source maps.
+- Makes no network requests: the unused spell checker no longer downloads dictionaries at startup.
+
+### Fixes
+
+- Redraws the spectrogram after the GPU drops the WebGL context, instead of leaving the plot blank.
+- Keeps software WebGL available on systems without GPU acceleration, and says so when WebGL is unavailable.
+- Runs each analysis in its own worker, so a timed-out job can no longer deliver results to a later request.
+- Reports a missing file or decoder with a clear message instead of a raw system error.
+- Saves exported images as `name-spectrum.png` rather than `name.ext-spectrum.png`.
+- Stops reallocating the spectrogram canvas on every pan and zoom frame.
+
+### Development
+
+- Adds unit tests for the FFT, waveform bands, view math and palettes, run in CI.
+- Publishes each release with its CHANGELOG.md section as the release notes, and stops the release early when the section is missing.
+- Stops persisting the checkout token in CI jobs, and makes `pnpm run clean` work on Windows.
+
 ## 1.1.1
 
 - Seals macOS bundles with an ad-hoc signature after packaging. electron-builder renames the Electron executable and adds resources, which invalidates the signature the downloaded Electron ships with, and Apple Silicon reports such a bundle as damaged; the app now launches once its quarantine attribute is cleared.
