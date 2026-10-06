@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session } from 'electron';
 import * as path from 'path';
 import { readAudioFile } from './audioFile';
 
@@ -16,15 +16,21 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      // No text input needs it, and it would download dictionaries at runtime.
+      spellcheck: false
     },
     titleBarStyle: 'hiddenInset',
     show: false
   });
 
+  // The app is a single local page: never navigate away or open other windows.
+  mainWindow.webContents.on('will-navigate', event => event.preventDefault());
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
 
-  if (process.argv.includes('--enable-logging')) {
+  if (!app.isPackaged && process.argv.includes('--enable-logging')) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -37,7 +43,12 @@ function createWindow(): void {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Audio analysis needs no camera, microphone, notifications or other permissions.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
