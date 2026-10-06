@@ -1,6 +1,6 @@
 {
   "name": "audiskope",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Cross-platform Audio Visualizer with Spectrogram Analysis",
   "main": "dist/main/main.js",
   "scripts": {

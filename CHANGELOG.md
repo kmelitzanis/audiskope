@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
 
 ### Security
 
-- Upgrades Electron from 35, which no longer receives security fixes, to 44. macOS builds now require macOS 12 or later.
+- Upgrades Electron from 35, which no longer receives security fixes, to 44. macOS builds now require macOS 13 (Ventura) or later.
 - Runs the window in Electron's renderer sandbox, blocks navigation, pop-up windows and permission requests, and opens DevTools only in development.
 - Accepts requests to the main process only from the app's own page, and reads only files the user opened in the file dialog or dropped onto the window.
 - Removes `blob:` and `unsafe-inline` from the Content Security Policy by loading the analysis workers from module files.
