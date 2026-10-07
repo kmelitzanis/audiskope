@@ -19,6 +19,7 @@
     "test:native": "node tests/native.cjs",
     "test:ui": "electron tests/ui.cjs",
     "licenses": "node scripts/generate-notices.cjs",
+    "logo": "python3 scripts/generate-logo-variants.py",
     "icons": "python3 scripts/generate-icons.py",
     "dmg-background": "python3 scripts/generate-dmg-background.py",
     "release:check": "node scripts/generate-notices.cjs --check-release",

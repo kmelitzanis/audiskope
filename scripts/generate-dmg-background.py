@@ -49,18 +49,21 @@ def tracked(draw, text, cx, y, fnt, fill, spacing):
 
 
 def equalizer(draw, cx, cy, size, scale):
-    """The five-bar mark from assets/icons/logo.svg, at its original proportions.
+    """The five-bar mark, matching scripts/generate-logo-variants.py.
 
-    `size` is the full logo box; bars span 0.4 of it, stroke is 0.025 wide and
-    bar heights run 0.12 to 0.48, exactly as in the SVG.
+    `size` is the full logo box: bars are 0.088 of it wide with 0.048 gaps,
+    and run 0.28 to 0.86 of its height.
     """
-    for x, h in [(-0.20, 0.12), (-0.10, 0.32), (0.0, 0.48), (0.10, 0.36), (0.20, 0.16)]:
-        xx = cx + x * size
+    heights = [0.28, 0.56, 0.86, 0.62, 0.34]
+    w, gap = 0.088 * size, 0.048 * size
+    total = len(heights) * w + (len(heights) - 1) * gap
+    x = cx - total / 2
+    for h in heights:
         half = h * size / 2
-        w = 0.025 * size
         draw.rounded_rectangle(
-            (xx - w / 2, cy - half, xx + w / 2, cy + half), radius=w / 2, fill=BLUE
+            (x, cy - half, x + w, cy + half), radius=w / 2, fill=BLUE
         )
+        x += w + gap
 
 
 def render(scale):
@@ -95,7 +98,7 @@ def render(scale):
     draw = ImageDraw.Draw(im)
 
     # Brand lockup.
-    equalizer(draw, 0.5 * w, 46 * scale, 115 * scale, scale)
+    equalizer(draw, 0.5 * w, 44 * scale, 62 * scale, scale)
     centered(draw, 'audiskope', 0.5 * w, 84 * scale, font(27 * scale), TEXT)
     tracked(
         draw, 'SPECTROGRAM ANALYZER', 0.5 * w, 119 * scale, font(10 * scale), MUTED,
