@@ -2,6 +2,7 @@
 <h1 align="center">Audiskope</h1>
 <p align="center">A minimal desktop spectrogram analyzer for inspecting and comparing audio files.</p>
 <p align="center"><a href="LICENSE">GPL-3.0-only</a> · macOS / Windows / Linux · Electron + TypeScript</p>
+<p align="center"><a href="https://kmelitzanis.github.io/audiskope/">Website</a> · <a href="https://github.com/kmelitzanis/audiskope/releases/latest">Download</a></p>
 
 ## What it does
 
@@ -52,6 +53,12 @@ xattr -dr com.apple.quarantine /Applications/Audiskope.app
 ```
 
 A build reported as *damaged* rather than *unverified* means its signature is invalid; report that, since every packaged bundle is sealed during the build.
+
+## Website
+
+The landing page lives in `site/` as plain HTML with inline CSS, no build step. `.github/workflows/pages.yml` publishes it to GitHub Pages on any push to `main` that touches `site/`. Download links and file sizes are filled in at runtime from the GitHub releases API, so the page does not need rebuilding for a new release; if that request fails the static links still resolve to the releases page.
+
+Preview it with any static server, for example `python3 -m http.server --directory site 8000`.
 
 ## Development and packaging
 

@@ -1,0 +1,46 @@
+name: Deploy website
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+# Pages needs id-token to attest the artifact it deploys.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one midway: a cancelled run can
+# leave the site serving a partially replaced artifact.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Check the site is self-contained
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f site/index.html
+          # Every local asset the page references must exist in the artifact.
+          missing=0
+          for ref in $(grep -oE '(src|href)="[^"#?:]+"' site/index.html \
+                       | sed -E 's/^(src|href)="//; s/"$//' \
+                       | grep -vE '^(https?:|mailto:|/)'); do
+            if [ ! -e "site/$ref" ]; then echo "missing asset: $ref"; missing=1; fi
+          done
+          exit $missing
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
