@@ -51,11 +51,17 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,12,14,.78);backdrop-f
 
 /* ---------------- hero ---------------- */
 .hero{position:relative;padding-block:92px 0;text-align:center;isolation:isolate}
-#hero-spectro{position:absolute;inset:0;width:100%;height:100%;z-index:-2;opacity:.72}
+/* The hero is far taller than the viewport, so the band is pinned to the top
+   rather than centred in it. */
+#hero-spectro{position:absolute;top:0;left:0;right:0;height:min(760px,100%);
+  z-index:-2;overflow:hidden;opacity:.8}
+#hero-spectro img{position:absolute;top:0;left:0;height:100%;width:auto;
+  min-width:100%;max-width:none;will-change:transform;transition:opacity .45s}
+#hero-spectro img+img{opacity:0}
 .hero-fade{position:absolute;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(ellipse 62% 46% at 50% 36%,rgba(11,12,14,.94) 12%,rgba(11,12,14,.74) 46%,transparent 78%),
-    linear-gradient(to bottom,rgba(11,12,14,.55) 0%,transparent 22%,transparent 62%,var(--bg) 97%)}
+    radial-gradient(ellipse 56% 34% at 50% 26%,rgba(11,12,14,.9) 8%,rgba(11,12,14,.55) 54%,transparent 84%),
+    linear-gradient(to bottom,rgba(11,12,14,.62) 0%,transparent 30%,rgba(11,12,14,.6) 62%,var(--bg) 78%)}
 .hero h1{font-size:clamp(36px,6.6vw,66px);line-height:1.04;letter-spacing:-2px;font-weight:700;margin:20px 0 0}
 .hero h1 .ch{display:inline-block;will-change:transform,opacity}
 .hero h1 .grad{display:inline-block;background:linear-gradient(94deg,var(--accent) 6%,#8fd9f2 44%,var(--amber) 98%);
@@ -73,6 +79,7 @@ header{position:sticky;top:0;z-index:50;background:rgba(11,12,14,.78);backdrop-f
 .showcase{margin-top:44px;position:relative}
 .frame{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);position:relative;
   box-shadow:0 40px 90px -34px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.025)}
+.frame.bare{border:0;background:transparent;box-shadow:none;border-radius:0}
 .frame .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:#101216}
 .frame .bar b{width:10px;height:10px;border-radius:50%;background:#2e333a;display:block}
 .frame .bar span{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
@@ -129,7 +136,10 @@ section{padding-block:96px;position:relative}
 
 /* spectrum rule */
 .rule{height:92px;position:relative;overflow:hidden;border-block:1px solid var(--line);background:#0d0f12}
-.rule canvas{position:absolute;inset:0;width:100%;height:100%}
+/* Anchored, not transform-centred: anime.js drives translateX and would
+   otherwise overwrite a centring transform. */
+.rule img{position:absolute;bottom:0;left:0;width:max(200%,1400px);height:auto;
+  max-width:none;will-change:transform;opacity:.9}
 
 footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font-size:14px}
 .foot{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
@@ -168,7 +178,11 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
 <main id="top">
 
 <div class="hero">
-  <canvas id="hero-spectro" aria-hidden="true"></canvas>
+  <div id="hero-spectro" aria-hidden="true">
+    <img src="assets/bg-triband.jpg" data-p="3band" alt="">
+    <img src="assets/bg-ice.jpg" data-p="ice" alt="" loading="lazy">
+    <img src="assets/bg-fire.jpg" data-p="fire" alt="" loading="lazy">
+  </div>
   <div class="hero-fade"></div>
   <div class="wrap">
     <span class="eyebrow reveal" data-rev>Free &amp; open source · macOS · Windows · Linux</span>
@@ -190,11 +204,10 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
 
     <div class="showcase reveal" data-rev>
       <div class="frame">
-        <div class="bar"><b></b><b></b><b></b><span id="frame-label">Audiskope · Tri-band</span></div>
         <div class="stack" id="stack">
-          <img src="assets/shot-triband.jpg" width="1960" height="1203" data-p="3band" alt="Audiskope with the Tri-band palette: a harmonic stack, two crossing sweeps and periodic transients in blue, amber and white.">
-          <img src="assets/shot-ice.jpg" width="1960" height="1203" data-p="ice" alt="The same analysis rendered with the Ice palette." loading="lazy">
-          <img src="assets/shot-fire.jpg" width="1960" height="1203" data-p="fire" alt="The same analysis rendered with the Fire palette." loading="lazy">
+          <img src="assets/spectro-triband.jpg" width="1596" height="566" data-p="3band" alt="A five-minute track analysed in Audiskope with the Tri-band palette: dense blue mid content, amber bass and the encoder's shelf near 20 kHz.">
+          <img src="assets/spectro-ice.jpg" width="1596" height="566" data-p="ice" alt="The same track with the Ice palette, with the cursor readout showing time, frequency and level." loading="lazy">
+          <img src="assets/spectro-fire.jpg" width="1596" height="566" data-p="fire" alt="The same track with the Fire palette." loading="lazy">
         </div>
       </div>
       <div class="switch" id="switch" role="group" aria-label="Palette preview">
@@ -206,7 +219,7 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
   </div>
 </div>
 
-<div class="rule"><canvas id="rule1" aria-hidden="true"></canvas></div>
+<div class="rule" id="rule1"><img src="assets/bg-triband.jpg" alt="" aria-hidden="true" loading="lazy"></div>
 
 <section id="features">
   <div class="wrap">
@@ -264,15 +277,15 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
       <h2 class="reveal" data-rev>Two files, one set of axes</h2>
       <p class="reveal" data-rev>Split view stacks both spectrograms on shared time and frequency axes, so a missing top octave or a different noise floor is visible at a glance.</p>
     </div>
-    <div class="frame reveal" data-rev style="margin-top:44px">
-      <div class="bar"><b></b><b></b><b></b><span>Audiskope · split view</span></div>
-      <img src="assets/shot-compare.jpg" width="1960" height="1203" loading="lazy"
-           alt="Audiskope in split view: two spectrograms stacked on shared axes, the upper one lacking content above 15 kHz.">
+    <div class="grid" style="margin-top:44px">
+      <div class="card reveal" data-rev><h3>Shared axes</h3><p>Both plots use one time range, one frequency range and one FFT size, so differences are differences in the audio rather than in the view.</p></div>
+      <div class="card reveal" data-rev><h3>Same instant</h3><p>Selecting A or B swaps the audible source without moving the playhead, so you hear the same bar of music from either file.</p></div>
+      <div class="card reveal" data-rev><h3>Honest limits</h3><p>There is no automatic alignment of leading silence, no loudness matching and no time stretching. What you load is what you compare.</p></div>
     </div>
   </div>
 </section>
 
-<div class="rule"><canvas id="rule2" aria-hidden="true"></canvas></div>
+<div class="rule" id="rule2"><img src="assets/bg-fire.jpg" alt="" aria-hidden="true" loading="lazy"></div>
 
 <section id="formats">
   <div class="wrap">

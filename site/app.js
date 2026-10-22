@@ -1,144 +1,56 @@
 /* Audiskope landing page.
  *
- * Everything visual here is synthesised from the same toy spectrum model, so
- * the page animates the product's own subject matter rather than generic
- * decoration. No audio is loaded and nothing is sent anywhere.
+ * The moving parts are driven by a real analysis: the background strips are
+ * Audiskope's own output for a five-minute track, and the analyser bars read
+ * their heights straight out of those pixels, so the page shows the product's
+ * actual spectrum rather than an invented one.
  */
 (() => {
 'use strict';
 
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const anime = window.anime || null;
-const animate = anime && (anime.animate || anime.default?.animate) || null;
-const stagger = anime && (anime.stagger || anime.default?.stagger) || (() => 0);
+const lib = window.anime || null;
+const animate = (lib && (lib.animate || lib.default?.animate)) || null;
+const stagger = (lib && (lib.stagger || lib.default?.stagger)) || (() => 0);
 
-/* ---------------------------------------------------------------- palettes */
-/* Mirrors the fragment shader in src/renderer/utils/webglRenderer.ts. */
-const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
-const mix = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
-const smooth = (e0, e1, v) => { const t = clamp01((v-e0)/(e1-e0)); return t*t*(3-2*t); };
-
-const PALETTES = {
-  '3band': v => v < 0.55 ? mix([0.005,0.012,0.025],[0.10,0.43,0.88], Math.pow(v/0.55,1.8))
-             : v < 0.84 ? mix([0.10,0.43,0.88],[1,0.56,0.07], smooth(0.55,0.84,v))
-             :            mix([1,0.56,0.07],[1,0.97,0.90], smooth(0.84,1,v)),
-  ice:   v => v < 0.33 ? [0,0,v*1.5]
-            : v < 0.66 ? [0,(v-0.33)*2.4,0.5+(v-0.33)*1.5]
-            :            [(v-0.66)*3, 0.8+(v-0.66)*0.6, 1],
-  fire:  v => v < 0.25 ? [v*1.6,0,0]
-            : v < 0.5  ? [0.4+(v-0.25)*2.4,(v-0.25)*1.2,0]
-            : v < 0.75 ? [1,0.3+(v-0.5)*2.8,0]
-            :            [1,1,(v-0.75)*4],
-};
 let palette = '3band';
+const SOURCES = {
+  '3band': 'assets/bg-triband.jpg',
+  ice: 'assets/bg-ice.jpg',
+  fire: 'assets/bg-fire.jpg',
+};
 
-/* Precomputed 256-entry lookup tables; recomputed only when the user switches. */
-const LUTS = {};
-for (const name of Object.keys(PALETTES)) {
-  const lut = new Uint8Array(256*3);
-  for (let i = 0; i < 256; i++) {
-    const c = PALETTES[name](i/255);
-    lut[i*3]   = clamp01(c[0])*255;
-    lut[i*3+1] = clamp01(c[1])*255;
-    lut[i*3+2] = clamp01(c[2])*255;
-  }
-  LUTS[name] = lut;
+/* ----------------------------------------------- read the real spectrum */
+/* One decode per palette, then plain array indexing per frame. */
+const sampled = {};
+function sample(name) {
+  if (sampled[name]) return Promise.resolve(sampled[name]);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.min(900, img.naturalWidth);
+      const h = Math.min(300, img.naturalHeight);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(img, 0, 0, w, h);
+      let data;
+      try { data = cx.getImageData(0, 0, w, h).data; }
+      catch { resolve(null); return; }
+      sampled[name] = { w, h, data };
+      resolve(sampled[name]);
+    };
+    img.onerror = () => resolve(null);
+    img.src = SOURCES[name];
+  });
+}
+/* Perceived brightness of the pixel at (x, y). */
+function level(s, x, y) {
+  const i = ((y | 0) * s.w + (x | 0)) * 4;
+  return (0.299 * s.data[i] + 0.587 * s.data[i+1] + 0.114 * s.data[i+2]) / 255;
 }
 
-/* ------------------------------------------------------------ the "signal" */
-/* One periodic scene so the loop seams are invisible. */
-const LOOP = 14;
-const peak = (f, centre, width) => Math.exp(-Math.pow((f-centre)/width, 2));
-
-function column(out, t) {
-  const p = (t % LOOP) / LOOP;            // 0..1 through the scene
-  const bins = out.length;
-  // Sweeps, drawn as travelling gaussian ridges.
-  const up   = 0.03 + 0.52*p*p;
-  const down = 0.88 - 0.70*p;
-  const vib  = 0.40 + 0.055*Math.sin(p*Math.PI*2*5);
-  // Broadband transients on a steady pulse.
-  const beat = (t % 1.75) / 1.75;
-  const hit  = beat < 0.05 ? Math.exp(-beat*48) : 0;
-
-  for (let b = 0; b < bins; b++) {
-    const f = b / bins;
-    let v = 0.035 + 0.035*Math.random();        // floor
-    // Harmonic comb, thinning with height.
-    for (let k = 1; k <= 13; k++) {
-      const c = 0.0295*k;
-      if (c > 1) break;
-      v += (0.60/k) * peak(f, c, 0.0050);
-    }
-    v += 0.92*peak(f, up, 0.0090);
-    v += 0.74*peak(f, down, 0.0090);
-    v += 0.66*peak(f, vib, 0.0072);
-    v += hit * (0.62 - 0.26*f) * (0.75 + 0.5*Math.random());
-    out[b] = clamp01(v);
-  }
-}
-
-/* -------------------------------------------------------- scrolling canvas */
-class Spectro {
-  constructor(canvas, { bins = 150, step = 2, speed = 54 } = {}) {
-    this.cv = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: false });
-    this.bins = bins; this.step = step; this.speed = speed;
-    this.col = new Float32Array(bins);
-    this.acc = 0; this.t = 0; this.visible = true;
-    this.resize();
-    new ResizeObserver(() => this.resize()).observe(canvas);
-    new IntersectionObserver(e => { this.visible = e[0].isIntersecting; })
-      .observe(canvas);
-  }
-  resize() {
-    const r = this.cv.getBoundingClientRect();
-    // Fixed internal resolution: this is a soft background, not a readout.
-    const w = Math.max(420, Math.min(1280, Math.round(r.width * 0.72))) | 0;
-    const h = Math.max(120, Math.min(420, Math.round(r.height * 0.75))) | 0;
-    if (w === this.cv.width && h === this.cv.height) return;
-    this.cv.width = w; this.cv.height = h;
-    this.ctx.fillStyle = '#07080a';
-    this.ctx.fillRect(0, 0, w, h);
-    this.prime = true;
-  }
-  drawColumn(x) {
-    const { ctx, bins, col, cv } = this;
-    const lut = LUTS[palette];
-    const h = cv.height, bh = h / bins;
-    for (let b = 0; b < bins; b++) {
-      const i = (col[b] * 255) | 0;
-      ctx.fillStyle = `rgb(${lut[i*3]},${lut[i*3+1]},${lut[i*3+2]})`;
-      ctx.fillRect(x, h - (b+1)*bh, this.step, bh + 1);
-    }
-  }
-  tick(dt) {
-    if (!this.visible) return;
-    const { ctx, cv, step } = this;
-    // Fill the whole canvas on first paint so it never starts blank.
-    if (this.prime) {
-      this.prime = false;
-      for (let x = 0; x < cv.width; x += step) {
-        this.t += step / this.speed;
-        column(this.col, this.t);
-        this.drawColumn(x);
-      }
-      return;
-    }
-    this.acc += dt * this.speed;
-    let moved = 0;
-    while (this.acc >= step && moved < cv.width) { this.acc -= step; moved += step; }
-    if (!moved) return;
-    ctx.drawImage(cv, -moved, 0);
-    for (let x = cv.width - moved; x < cv.width; x += step) {
-      this.t += step / this.speed;
-      column(this.col, this.t);
-      this.drawColumn(x);
-    }
-  }
-}
-
-/* ------------------------------------------------------------- the clock */
+/* ------------------------------------------------------------ the clock */
 const tickers = [];
 let last = performance.now();
 function frame(now) {
@@ -148,89 +60,120 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-/* --------------------------------------------------------------- hero art */
-const hero = document.getElementById('hero-spectro');
-if (hero) {
-  const s = new Spectro(hero, { bins: 160, step: 2, speed: 58 });
-  if (REDUCED) { s.tick(0); }
-  else tickers.push(dt => s.tick(dt));
-}
-for (const id of ['rule1', 'rule2']) {
-  const cv = document.getElementById(id);
-  if (!cv) continue;
-  const s = new Spectro(cv, { bins: 72, step: 3, speed: id === 'rule1' ? 34 : 26 });
-  if (REDUCED) s.tick(0); else tickers.push(dt => s.tick(dt));
+/* -------------------------------------------------- drifting backdrops */
+/* anime.js pans each strip back and forth; the images are not seamless, so
+ * alternating beats tiling, which would show a hard edge every cycle. */
+function drift(img, { distance, duration, delay = 0 }) {
+  if (!img) return;
+  if (REDUCED || !animate) return;
+  animate(img, {
+    translateX: [0, -distance],
+    duration, delay,
+    loop: true, alternate: true, ease: 'inOutSine',
+  });
 }
 
-/* ---------------------------------------------------- live analyser strip */
-const strip = document.getElementById('analyser');
-if (strip) {
-  const BARS = Math.min(64, Math.max(28, Math.floor(innerWidth / 26)));
-  const bars = [];
-  for (let i = 0; i < BARS; i++) { const el = document.createElement('i'); strip.appendChild(el); bars.push(el); }
-  const buf = new Float32Array(BARS);
-  const held = new Float32Array(BARS);
-  if (REDUCED) {
-    column(buf, 3);
-    bars.forEach((el, i) => el.style.height = (6 + buf[i] * 46) + 'px');
-  } else {
-    tickers.push((dt, t) => {
-      column(buf, t * 0.9);
-      for (let i = 0; i < BARS; i++) {
-        // Asymmetric smoothing: snap up, fall back slowly, like a real meter.
-        const v = Math.pow(buf[i], 0.8);
-        held[i] = v > held[i] ? v : held[i] + (v - held[i]) * Math.min(1, dt * 7);
-        bars[i].style.height = (5 + held[i] * 48).toFixed(1) + 'px';
-      }
-    });
+const heroLayer = document.getElementById('hero-spectro');
+if (heroLayer) {
+  for (const img of heroLayer.querySelectorAll('img')) {
+    img.style.opacity = img.dataset.p === palette ? '1' : '0';
+    drift(img, { distance: 260, duration: 42000 });
   }
 }
+drift(document.querySelector('#rule1 img'), { distance: 300, duration: 30000 });
+drift(document.querySelector('#rule2 img'), { distance: 300, duration: 36000, delay: 2000 });
 
-/* -------------------------------------------------------------- logo mark */
+/* ------------------------------------------------ live analyser strip */
+const strip = document.getElementById('analyser');
+if (strip) {
+  const BARS = Math.min(64, Math.max(26, Math.floor(innerWidth / 26)));
+  const bars = [];
+  for (let i = 0; i < BARS; i++) {
+    const el = document.createElement('i');
+    strip.appendChild(el);
+    bars.push(el);
+  }
+  const held = new Float32Array(BARS);
+  let src = null;
+  const load = (name) => sample(name).then(s => { if (s) src = s; });
+
+  const paint = (scanX) => {
+    if (!src) return;
+    for (let i = 0; i < BARS; i++) {
+      // Bars run low to high frequency; the image has 0 Hz at the bottom.
+      const y = (src.h - 1) * (1 - i / (BARS - 1));
+      const v = Math.pow(level(src, scanX, y), 0.85);
+      held[i] = REDUCED || v > held[i] ? v : held[i] + (v - held[i]) * 0.14;
+      bars[i].style.height = (4 + held[i] * 50).toFixed(1) + 'px';
+    }
+  };
+
+  if (REDUCED) {
+    sample(palette).then(s => { if (s) { src = s; paint(s.w * 0.4); } });
+  } else {
+    load(palette);
+    tickers.push((dt, t) => { if (src) paint((t * 34) % src.w); });
+  }
+  strip._reload = load;
+}
+
+/* ------------------------------------------------------------ logo mark */
 const mark = document.getElementById('mark');
 if (mark) {
   const ctx = mark.getContext('2d');
   const H = [0.28, 0.56, 0.86, 0.62, 0.34], BW = 0.088, GAP = 0.048;
-  const paint = (t) => {
+  const paint = (scale) => {
     const S = mark.width;
-    ctx.clearRect(0, 0, S, S);
     ctx.fillStyle = '#17191d';
     ctx.fillRect(0, 0, S, S);
     const w = BW*S, g = GAP*S;
     let x = (S - (H.length*w + (H.length-1)*g)) / 2;
     ctx.fillStyle = '#28c1f5';
     for (let i = 0; i < H.length; i++) {
-      const wob = REDUCED ? 1 : 0.82 + 0.3*Math.abs(Math.sin(t*1.7 + i*0.9));
-      const hh = H[i]*S*wob;
-      const r = w/2, y = (S-hh)/2;
+      const hh = H[i] * S * (scale[i] ?? 1);
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(x, y, w, hh, r) : ctx.rect(x, y, w, hh);
+      if (ctx.roundRect) ctx.roundRect(x, (S-hh)/2, w, hh, w/2);
+      else ctx.rect(x, (S-hh)/2, w, hh);
       ctx.fill();
       x += w + g;
     }
   };
-  paint(0);
-  if (!REDUCED) tickers.push((dt, t) => paint(t));
+  paint([1,1,1,1,1]);
+  if (!REDUCED) {
+    const s = [1,1,1,1,1];
+    tickers.push((dt, t) => {
+      for (let i = 0; i < 5; i++) s[i] = 0.84 + 0.28*Math.abs(Math.sin(t*1.6 + i*0.8));
+      paint(s);
+    });
+  }
 }
 
 if (tickers.length) requestAnimationFrame(frame);
 
-/* -------------------------------------------------------- anime.js intro */
+/* --------------------------------------------------------- anime intro */
 const headline = document.getElementById('headline');
 if (headline) {
   headline.textContent = '';
   const chars = [];
-  // Line one is split per character. Line two carries a clipped background
-  // gradient, which stops clipping to inline-block children, so it animates
-  // as a single element instead.
-  for (const ch of headline.dataset.line1) {
-    const c = document.createElement('span');
-    c.className = 'ch';
-    c.textContent = ch === ' ' ? '\u00a0' : ch;
-    headline.appendChild(c);
-    chars.push(c);
-  }
+  // Split per character for the stagger, but keep each word in a non-breaking
+  // wrapper: inline-block letters would otherwise wrap mid-word.
+  const words = headline.dataset.line1.split(' ');
+  words.forEach((word, wi) => {
+    const w = document.createElement('span');
+    w.style.whiteSpace = 'nowrap';
+    for (const ch of word) {
+      const c = document.createElement('span');
+      c.className = 'ch';
+      c.textContent = ch;
+      w.appendChild(c);
+      chars.push(c);
+    }
+    headline.appendChild(w);
+    if (wi < words.length - 1) headline.appendChild(document.createTextNode(' '));
+  });
   headline.appendChild(document.createElement('br'));
+  // The second line carries a clipped background gradient, which stops
+  // clipping to inline-block children, so it animates as one element.
   const grad = document.createElement('span');
   grad.className = 'grad';
   grad.textContent = headline.dataset.line2;
@@ -247,12 +190,12 @@ if (headline) {
     });
     animate(grad, {
       opacity: [0, 1], translateY: [30, 0], scale: [0.94, 1],
-      duration: 900, delay: 120 + 20 * chars.length + 60, ease: 'out(4)',
+      duration: 900, delay: 120 + 20*chars.length + 60, ease: 'out(4)',
     });
   }
 }
 
-/* ------------------------------------------------- scroll-driven reveals */
+/* --------------------------------------------------- scroll reveals */
 const revealables = [...document.querySelectorAll('[data-rev]')];
 if (REDUCED || !animate) {
   revealables.forEach(el => { el.style.opacity = 1; });
@@ -262,32 +205,27 @@ if (REDUCED || !animate) {
     if (!show.length) return;
     show.forEach(el => io.unobserve(el));
     animate(show, {
-      opacity: [0, 1],
-      translateY: [22, 0],
-      duration: 680,
-      delay: stagger(55),
-      ease: 'out(3)',
+      opacity: [0, 1], translateY: [22, 0],
+      duration: 680, delay: stagger(55), ease: 'out(3)',
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
   revealables.forEach(el => io.observe(el));
 }
 
-/* ------------------------------------------------------- counting numbers */
+/* ------------------------------------------------- counting numbers */
 const counters = [...document.querySelectorAll('[data-count]')];
 if (counters.length) {
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (!e.isIntersecting) continue;
       io.unobserve(e.target);
-      const el = e.target;
-      const target = +el.dataset.count;
+      const el = e.target, target = +el.dataset.count;
       const pre = el.dataset.prefix || '', suf = el.dataset.suffix || '';
       if (REDUCED) { el.textContent = pre + target + suf; continue; }
-      const start = performance.now(), dur = 1400;
+      const t0 = performance.now(), dur = 1400;
       const run = (now) => {
-        const k = Math.min(1, (now - start) / dur);
-        const eased = 1 - Math.pow(1 - k, 4);
-        el.textContent = pre + Math.round(target * eased) + suf;
+        const k = Math.min(1, (now - t0) / dur);
+        el.textContent = pre + Math.round(target * (1 - Math.pow(1-k, 4))) + suf;
         if (k < 1) requestAnimationFrame(run);
       };
       requestAnimationFrame(run);
@@ -296,31 +234,33 @@ if (counters.length) {
   counters.forEach(el => io.observe(el));
 }
 
-/* ----------------------------------------------------- palette switching */
+/* ------------------------------------------------- palette switching */
 const sw = document.getElementById('switch');
 const stack = document.getElementById('stack');
 const frameLabel = document.getElementById('frame-label');
 if (sw && stack) {
   const shots = [...stack.querySelectorAll('img')];
+  const heroes = heroLayer ? [...heroLayer.querySelectorAll('img')] : [];
   const names = { '3band': 'Tri-band', ice: 'Ice', fire: 'Fire' };
   sw.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-p]');
-    if (!btn) return;
-    const want = btn.dataset.p;
-    if (want === palette) return;
-    palette = want;                      // the live canvases pick this up
+    if (!btn || btn.dataset.p === palette) return;
+    palette = btn.dataset.p;
     for (const b of sw.querySelectorAll('button'))
       b.setAttribute('aria-pressed', String(b === btn));
-    if (frameLabel) frameLabel.textContent = 'Audiskope · ' + names[want];
-    shots.forEach(img => {
-      const on = img.dataset.p === want;
+    if (frameLabel) frameLabel.textContent = 'Audiskope · ' + names[palette];
+    const fade = (img) => {
+      const on = img.dataset.p === palette;
       if (REDUCED || !animate) { img.style.opacity = on ? 1 : 0; return; }
       animate(img, { opacity: on ? 1 : 0, duration: 420, ease: 'inOut(2)' });
-    });
+    };
+    shots.forEach(fade);
+    heroes.forEach(fade);
+    if (strip && strip._reload) strip._reload(palette);
   });
 }
 
-/* ------------------------------------------------------- release metadata */
+/* -------------------------------------------------- release metadata */
 (async () => {
   try {
     const res = await fetch('https://api.github.com/repos/kmelitzanis/audiskope/releases/latest');
@@ -336,7 +276,6 @@ if (sw && stack) {
       card.querySelector('.meta').textContent =
         card.dataset.match.slice(card.dataset.match.lastIndexOf('.')) + ' · ' + mb(a.size);
     }
-
     const note = document.getElementById('version-note');
     if (note && rel.tag_name)
       note.textContent = `${rel.tag_name} · GPL-3.0 · no account · no telemetry · no network access`;
