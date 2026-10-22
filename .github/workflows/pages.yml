@@ -39,6 +39,16 @@ jobs:
             if [ ! -e "site/$ref" ]; then echo "missing asset: $ref"; missing=1; fi
           done
           exit $missing
+      # A stale app.js paired with fresh markup breaks the page, so every
+      # deployment gets its own URL for the script.
+      - name: Stamp the script with the commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="${GITHUB_SHA::8}"
+          sed -i "s#src=\"app.js\"#src=\"app.js?v=$sha\"#" site/index.html
+          grep -q "app.js?v=$sha" site/index.html
+          echo "stamped app.js?v=$sha"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
