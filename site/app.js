@@ -150,6 +150,15 @@ if (mark) {
 
 if (tickers.length) requestAnimationFrame(frame);
 
+/* anime.js parks its engine while the document is hidden and does not always
+ * restart it; the drifting backdrops are decorative, but a stalled engine
+ * should not leave them frozen forever. */
+document.addEventListener('visibilitychange', () => {
+  const engine = lib && lib.engine;
+  if (!document.hidden && engine && engine.paused && typeof engine.resume === 'function')
+    engine.resume();
+});
+
 /* --------------------------------------------------------- anime intro */
 const headline = document.getElementById('headline');
 if (headline) {
@@ -172,44 +181,42 @@ if (headline) {
     if (wi < words.length - 1) headline.appendChild(document.createTextNode(' '));
   });
   headline.appendChild(document.createElement('br'));
-  // The second line carries a clipped background gradient, which stops
-  // clipping to inline-block children, so it animates as one element.
   const grad = document.createElement('span');
   grad.className = 'grad';
   grad.textContent = headline.dataset.line2;
   headline.appendChild(grad);
 
-  if (REDUCED || !animate) {
-    chars.forEach(c => { c.style.opacity = 1; });
-  } else {
-    chars.forEach(c => { c.style.opacity = 0; });
-    grad.style.opacity = 0;
-    animate(chars, {
-      opacity: [0, 1], translateY: [26, 0], filter: ['blur(8px)', 'blur(0px)'],
-      duration: 760, delay: stagger(20, { start: 120 }), ease: 'out(3)',
+  requestAnimationFrame(() => {
+    chars.forEach((c, i) => {
+      c.style.transitionDelay = REDUCED ? '0ms' : (120 + i * 20) + 'ms';
+      c.classList.add('in');
     });
-    animate(grad, {
-      opacity: [0, 1], translateY: [30, 0], scale: [0.94, 1],
-      duration: 900, delay: 120 + 20*chars.length + 60, ease: 'out(4)',
-    });
-  }
+    grad.style.transitionDelay = REDUCED ? '0ms' : (160 + chars.length * 20) + 'ms';
+    grad.classList.add('in');
+  });
 }
 
 /* --------------------------------------------------- scroll reveals */
+/* Class-based so the content appears even if the animation engine is paused,
+ * which anime.js does whenever the document is hidden — a page opened in a
+ * background tab would otherwise stay blank. */
 const revealables = [...document.querySelectorAll('[data-rev]')];
-if (REDUCED || !animate) {
-  revealables.forEach(el => { el.style.opacity = 1; });
+const reveal = (el, delay = 0) => {
+  el.style.transitionDelay = REDUCED ? '0ms' : delay + 'ms';
+  el.classList.add('in');
+};
+if (REDUCED) {
+  revealables.forEach(el => reveal(el));
 } else {
   const io = new IntersectionObserver((entries) => {
     const show = entries.filter(e => e.isIntersecting).map(e => e.target);
-    if (!show.length) return;
-    show.forEach(el => io.unobserve(el));
-    animate(show, {
-      opacity: [0, 1], translateY: [22, 0],
-      duration: 680, delay: stagger(55), ease: 'out(3)',
-    });
+    show.forEach((el, i) => { io.unobserve(el); reveal(el, i * 55); });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
   revealables.forEach(el => io.observe(el));
+  // Last resort: nothing stays invisible, whatever the observer did.
+  setTimeout(() => revealables.forEach(el => {
+    if (!el.classList.contains('in')) reveal(el);
+  }), 4000);
 }
 
 /* ------------------------------------------------- counting numbers */
@@ -249,11 +256,7 @@ if (sw && stack) {
     for (const b of sw.querySelectorAll('button'))
       b.setAttribute('aria-pressed', String(b === btn));
     if (frameLabel) frameLabel.textContent = 'Audiskope · ' + names[palette];
-    const fade = (img) => {
-      const on = img.dataset.p === palette;
-      if (REDUCED || !animate) { img.style.opacity = on ? 1 : 0; return; }
-      animate(img, { opacity: on ? 1 : 0, duration: 420, ease: 'inOut(2)' });
-    };
+    const fade = (img) => { img.style.opacity = img.dataset.p === palette ? '1' : '0'; };
     shots.forEach(fade);
     heroes.forEach(fade);
     if (strip && strip._reload) strip._reload(palette);

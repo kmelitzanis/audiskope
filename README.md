@@ -58,7 +58,7 @@ A build reported as *damaged* rather than *unverified* means its signature is in
 
 The landing page lives in `site/` as plain HTML, CSS and one script, with no build step. `.github/workflows/pages.yml` publishes it to GitHub Pages on any push to `main` that touches `site/`.
 
-`site/assets/` holds crops of Audiskope's own output for a real track, exported from the application: `spectro-*.jpg` for the palette preview and `bg-*.jpg` for the drifting backdrops. `site/app.js` samples those pixels to drive the analyser bars, so the bars show the track's actual spectrum. Choreography uses anime.js from a CDN. The page degrades in stages: without anime.js the content is revealed immediately, without `app.js` nothing is ever hidden, and `prefers-reduced-motion` renders a static frame instead of animating.
+`site/assets/` holds crops of Audiskope's own output for a real track, exported from the application: `spectro-*.jpg` for the palette preview and `bg-*.jpg` for the drifting backdrops. `site/app.js` samples those pixels to drive the analyser bars, so the bars show the track's actual spectrum. Choreography uses anime.js from a CDN for the drifting backdrops only. Visibility never depends on it: reveals and the headline are CSS transitions toggled by a class, because anime.js parks its engine while the document is hidden and a page opened in a background tab would otherwise stay blank. Without `app.js` nothing is hidden in the first place, and `prefers-reduced-motion` skips the transitions.
 
 Download links and file sizes are filled in at runtime from the GitHub releases API, so the page does not need rebuilding for a new release; if that request fails the static links still resolve to the releases page.
 
