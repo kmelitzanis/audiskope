@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audiskope — desktop spectrogram analyzer</title>
 <meta name="description" content="A minimal desktop spectrogram analyzer for inspecting and comparing audio files. Free and open source, for macOS, Windows and Linux.">
@@ -10,15 +11,13 @@
 <meta property="og:title" content="Audiskope — desktop spectrogram analyzer">
 <meta property="og:description" content="Inspect and compare audio files with a GPU-accelerated spectrogram. Free and open source.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="assets/screenshot.jpg">
+<meta property="og:image" content="assets/shot-triband.jpg">
 <style>
 :root{
-  --bg:#0e0f11; --panel:#15171a; --raised:#1b1e22; --line:#282c31;
-  --text:#e8e9ea; --muted:#9aa0a6; --dim:#6b7177;
-  --accent:#21b9ed; --accent-dim:#1a8fb8;
-  --amber:#ff8f12;
-  --ramp:linear-gradient(90deg,#0a0f1c,#1a6ee0 48%,#ff8f12 82%,#fff7e6);
-  --radius:10px;
+  --bg:#0b0c0e; --panel:#141619; --raised:#1a1d21; --line:#272b31;
+  --text:#e9eaec; --muted:#99a0a7; --dim:#6a7178;
+  --accent:#21b9ed; --accent-2:#1a8fb8; --amber:#ff8f12;
+  --radius:12px;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -27,113 +26,112 @@ body{
   background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
   font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
 }
 img{max-width:100%;height:auto;display:block}
 a{color:inherit}
-.wrap{max-width:1120px;margin:0 auto;padding-inline:24px}
-.eyebrow{
-  font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
-  color:var(--dim);font-weight:500;
-}
+.wrap{max-width:1140px;margin:0 auto;padding-inline:24px}
+.eyebrow{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--dim);font-weight:500}
 
-/* ---------- header ---------- */
-header{
-  position:sticky;top:0;z-index:20;
-  background:rgba(14,15,17,.82);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);
-}
-.nav{display:flex;align-items:center;gap:14px;height:60px}
+/* ---------------- header ---------------- */
+header{position:sticky;top:0;z-index:50;background:rgba(11,12,14,.78);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:14px;height:62px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.3px;text-decoration:none;font-size:17px}
-.brand img{width:26px;height:26px;border-radius:6px}
+.brand canvas{width:26px;height:26px;border-radius:7px;background:#17191d}
 .nav-links{margin-left:auto;display:flex;align-items:center;gap:22px;font-size:14px}
-.nav-links a{color:var(--muted);text-decoration:none}
+.nav-links a{color:var(--muted);text-decoration:none;transition:color .2s}
 .nav-links a:hover{color:var(--text)}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:9px;
-  padding:11px 18px;border-radius:7px;border:1px solid var(--line);
-  background:var(--raised);color:var(--text);text-decoration:none;
-  font-size:14px;font-weight:550;white-space:nowrap;
-}
-.btn:hover{border-color:#464c53;background:#22262b}
-.btn-primary{background:var(--accent);border-color:var(--accent);color:#07222c;font-weight:650}
-.btn-primary:hover{background:#3cc7f5;border-color:#3cc7f5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:11px 18px;border-radius:8px;
+  border:1px solid var(--line);background:var(--raised);color:var(--text);text-decoration:none;
+  font-size:14px;font-weight:550;white-space:nowrap;transition:border-color .2s,background .2s,transform .2s}
+.btn:hover{border-color:#4a5058;background:#22262b}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#06222c;font-weight:680}
+.btn-primary:hover{background:#44ccf7;border-color:#44ccf7}
 .btn svg{width:17px;height:17px;flex:none}
 
-/* ---------- hero ---------- */
-.hero{padding-block:76px 0;text-align:center;position:relative;overflow:hidden}
-.hero::before{
-  content:"";position:absolute;inset:-40% 0 auto;height:560px;
-  background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(33,185,237,.13),transparent 70%);
-  pointer-events:none;
-}
-.hero h1{
-  font-size:clamp(34px,6.2vw,60px);line-height:1.08;letter-spacing:-1.6px;
-  font-weight:680;margin:18px 0 0;
-}
-.hero .lede{
-  color:var(--muted);font-size:clamp(16px,2.4vw,19px);
-  max-width:620px;margin:18px auto 0;
-}
-.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:30px}
-.cta-note{margin-top:14px;font-size:13px;color:var(--dim)}
-.cta-note code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+/* ---------------- hero ---------------- */
+.hero{position:relative;padding-block:92px 0;text-align:center;isolation:isolate}
+#hero-spectro{position:absolute;inset:0;width:100%;height:100%;z-index:-2;opacity:.72}
+.hero-fade{position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 62% 46% at 50% 36%,rgba(11,12,14,.94) 12%,rgba(11,12,14,.74) 46%,transparent 78%),
+    linear-gradient(to bottom,rgba(11,12,14,.55) 0%,transparent 22%,transparent 62%,var(--bg) 97%)}
+.hero h1{font-size:clamp(36px,6.6vw,66px);line-height:1.04;letter-spacing:-2px;font-weight:700;margin:20px 0 0}
+.hero h1 .ch{display:inline-block;will-change:transform,opacity}
+.hero h1 .grad{display:inline-block;background:linear-gradient(94deg,var(--accent) 6%,#8fd9f2 44%,var(--amber) 98%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;will-change:transform,opacity}
+.hero .lede{color:var(--muted);font-size:clamp(16px,2.3vw,19px);max-width:600px;margin:20px auto 0}
+.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:32px}
+.cta-note{margin-top:15px;font-size:13px;color:var(--dim);font-family:var(--mono)}
 
-.shot{
-  margin-top:52px;border:1px solid var(--line);border-radius:12px;
-  overflow:hidden;background:var(--panel);
-  box-shadow:0 30px 70px -28px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.02);
-}
-.shot img{width:100%}
+/* live analyser strip */
+.analyser{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:54px;margin-top:40px}
+.analyser i{width:4px;border-radius:2px;background:linear-gradient(to top,var(--accent-2),var(--accent));
+  height:6px;display:block;will-change:height}
 
-/* ---------- ramp divider ---------- */
-.ramp{height:2px;background:var(--ramp);opacity:.6;margin-top:0}
+/* ---------------- showcase ---------------- */
+.showcase{margin-top:44px;position:relative}
+.frame{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);position:relative;
+  box-shadow:0 40px 90px -34px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.025)}
+.frame .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:#101216}
+.frame .bar b{width:10px;height:10px;border-radius:50%;background:#2e333a;display:block}
+.frame .bar span{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.stack{position:relative}
+.stack img{width:100%;display:block}
+.stack img+img{position:absolute;inset:0;opacity:0}
+.switch{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
+.switch button{font:inherit;font-size:13px;padding:8px 16px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--muted);transition:all .22s}
+.switch button:hover{color:var(--text);border-color:#454b53}
+.switch button[aria-pressed=true]{color:var(--text);border-color:var(--accent);background:rgba(33,185,237,.1)}
 
-/* ---------- sections ---------- */
-section{padding-block:84px}
-.sec-head{max-width:660px}
-.sec-head h2{font-size:clamp(25px,3.6vw,34px);letter-spacing:-.7px;font-weight:650;margin-top:12px}
+/* ---------------- sections ---------------- */
+section{padding-block:96px;position:relative}
+.sec-head{max-width:680px}
+.sec-head h2{font-size:clamp(26px,3.8vw,38px);letter-spacing:-1px;font-weight:680;margin-top:12px}
 .sec-head p{color:var(--muted);margin-top:14px}
+.js .reveal{opacity:0;will-change:transform,opacity}
 
-.grid{display:grid;gap:18px;margin-top:44px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
-.card{
-  background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--radius);padding:24px;
-}
-.card h3{font-size:16px;font-weight:620;margin-bottom:9px;letter-spacing:-.2px}
+.grid{display:grid;gap:18px;margin-top:46px;grid-template-columns:repeat(auto-fit,minmax(272px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px;
+  position:relative;overflow:hidden;transition:border-color .25s,transform .25s}
+.card:hover{border-color:#3c434b;transform:translateY(-3px)}
+.card h3{font-size:16.5px;font-weight:640;margin-bottom:9px;letter-spacing:-.2px}
 .card p{color:var(--muted);font-size:14.5px}
-.card .ic{
-  width:34px;height:34px;border-radius:8px;margin-bottom:15px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(33,185,237,.1);color:var(--accent);
-}
-.card .ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.card .ic{width:36px;height:36px;border-radius:9px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;
+  background:rgba(33,185,237,.1);color:var(--accent)}
+.card .ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
-/* ---------- formats ---------- */
+/* stats */
+.stats{display:grid;gap:18px;margin-top:46px;grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.stat .n{font-size:34px;font-weight:700;letter-spacing:-1.3px;font-family:var(--mono);
+  background:linear-gradient(180deg,var(--text),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .l{color:var(--muted);font-size:13.5px;margin-top:5px}
+
+/* formats */
 .formats{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
-.chip{
-  font-family:var(--mono);font-size:12.5px;padding:7px 12px;
-  border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);
-}
-.chip.strong{color:var(--accent);border-color:rgba(33,185,237,.35);background:rgba(33,185,237,.07)}
-.note{
-  margin-top:26px;padding:17px 19px;border-left:2px solid var(--accent-dim);
-  background:var(--panel);border-radius:0 8px 8px 0;color:var(--muted);font-size:14.5px;
-}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border:1px solid var(--line);border-radius:7px;
+  background:var(--panel);color:var(--muted)}
+.chip.strong{color:var(--accent);border-color:rgba(33,185,237,.34);background:rgba(33,185,237,.07)}
+.note{margin-top:28px;padding:18px 20px;border-left:2px solid var(--accent-2);background:var(--panel);
+  border-radius:0 10px 10px 0;color:var(--muted);font-size:14.5px}
+.note code{display:block;margin-top:10px;font-family:var(--mono);font-size:12.5px;color:var(--accent);overflow-x:auto}
 
-/* ---------- downloads ---------- */
-.dl-grid{display:grid;gap:14px;margin-top:40px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
-.dl{
-  display:flex;flex-direction:column;gap:5px;
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-  padding:22px;text-decoration:none;
-}
-.dl:hover{border-color:var(--accent-dim);background:#171b1f}
-.dl .os{font-weight:620;font-size:15.5px;display:flex;align-items:center;gap:9px}
+/* downloads */
+.dl-grid{display:grid;gap:14px;margin-top:42px;grid-template-columns:repeat(auto-fit,minmax(252px,1fr))}
+.dl{display:flex;flex-direction:column;gap:5px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:24px;text-decoration:none;transition:border-color .22s,transform .22s,background .22s}
+.dl:hover{border-color:var(--accent-2);background:#171b1f;transform:translateY(-3px)}
+.dl .os{font-weight:640;font-size:15.5px}
 .dl .meta{color:var(--dim);font-size:13px;font-family:var(--mono)}
 .dl .arch{color:var(--muted);font-size:13.5px}
 
-/* ---------- footer ---------- */
-footer{border-top:1px solid var(--line);padding-block:44px;color:var(--dim);font-size:14px}
+/* spectrum rule */
+.rule{height:92px;position:relative;overflow:hidden;border-block:1px solid var(--line);background:#0d0f12}
+.rule canvas{position:absolute;inset:0;width:100%;height:100%}
+
+footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font-size:14px}
 .foot{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
 .foot a{color:var(--muted);text-decoration:none}
 .foot a:hover{color:var(--text)}
@@ -141,8 +139,15 @@ footer{border-top:1px solid var(--line);padding-block:44px;color:var(--dim);font
 
 @media(max-width:620px){
   .nav-links a:not(.btn){display:none}
-  section{padding-block:60px}
-  .hero{padding-top:52px}
+  section{padding-block:64px}
+  .hero{padding-top:60px}
+  .analyser{height:40px;gap:2px}
+  .analyser i{width:3px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1!important;transform:none!important}
+  .card:hover,.dl:hover{transform:none}
 }
 </style>
 </head>
@@ -150,12 +155,12 @@ footer{border-top:1px solid var(--line);padding-block:44px;color:var(--dim);font
 
 <header>
   <div class="wrap nav">
-    <a class="brand" href="#top"><img src="assets/logo.svg" alt=""> audiskope</a>
+    <a class="brand" href="#top"><canvas id="mark" width="52" height="52" aria-hidden="true"></canvas> audiskope</a>
     <nav class="nav-links">
       <a href="#features">Features</a>
+      <a href="#compare">Compare</a>
       <a href="#formats">Formats</a>
-      <a href="#download">Download</a>
-      <a class="btn" href="https://github.com/kmelitzanis/audiskope">GitHub</a>
+      <a class="btn" href="#download">Download</a>
     </nav>
   </div>
 </header>
@@ -163,90 +168,130 @@ footer{border-top:1px solid var(--line);padding-block:44px;color:var(--dim);font
 <main id="top">
 
 <div class="hero">
+  <canvas id="hero-spectro" aria-hidden="true"></canvas>
+  <div class="hero-fade"></div>
   <div class="wrap">
-    <span class="eyebrow">Free &amp; open source · macOS · Windows · Linux</span>
-    <h1>See what your audio<br>is actually made of.</h1>
-    <p class="lede">
-      A minimal desktop spectrogram analyzer. Open a file, read time, frequency and
-      level under the cursor, and compare two files on shared axes.
+    <span class="eyebrow reveal" data-rev>Free &amp; open source · macOS · Windows · Linux</span>
+    <h1 id="headline" data-line1="See what your audio" data-line2="is made of."></h1>
+    <p class="lede reveal" data-rev>
+      A minimal desktop spectrogram analyzer. Open a file, read time, frequency and level
+      under the cursor, and compare two files on shared axes.
     </p>
-    <div class="cta">
+    <div class="cta reveal" data-rev>
       <a class="btn btn-primary" id="primary-dl" href="#download">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg>
-        Download
+        <span>Download</span>
       </a>
       <a class="btn" href="https://github.com/kmelitzanis/audiskope">View source</a>
     </div>
-    <p class="cta-note" id="version-note">GPL-3.0 · no account, no telemetry, no network access</p>
-    <div class="shot">
-      <img src="assets/screenshot.jpg" width="2000" height="1234"
-           alt="Audiskope showing a spectrogram: a harmonic stack, two crossing frequency sweeps and periodic transients, with a frequency axis in kHz and a dBFS level ramp.">
+    <p class="cta-note reveal" data-rev id="version-note">GPL-3.0 · no account · no telemetry · no network access</p>
+
+    <div class="analyser" id="analyser" aria-hidden="true"></div>
+
+    <div class="showcase reveal" data-rev>
+      <div class="frame">
+        <div class="bar"><b></b><b></b><b></b><span id="frame-label">Audiskope · Tri-band</span></div>
+        <div class="stack" id="stack">
+          <img src="assets/shot-triband.jpg" width="1960" height="1203" data-p="3band" alt="Audiskope with the Tri-band palette: a harmonic stack, two crossing sweeps and periodic transients in blue, amber and white.">
+          <img src="assets/shot-ice.jpg" width="1960" height="1203" data-p="ice" alt="The same analysis rendered with the Ice palette." loading="lazy">
+          <img src="assets/shot-fire.jpg" width="1960" height="1203" data-p="fire" alt="The same analysis rendered with the Fire palette." loading="lazy">
+        </div>
+      </div>
+      <div class="switch" id="switch" role="group" aria-label="Palette preview">
+        <button data-p="3band" aria-pressed="true">Tri-band</button>
+        <button data-p="ice" aria-pressed="false">Ice</button>
+        <button data-p="fire" aria-pressed="false">Fire</button>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="ramp"></div>
+<div class="rule"><canvas id="rule1" aria-hidden="true"></canvas></div>
 
 <section id="features">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">What it does</span>
-      <h2>Built for looking closely</h2>
-      <p>Every file is decoded locally at its original sample rate. Nothing is uploaded, and source files are never modified.</p>
+      <span class="eyebrow reveal" data-rev>What it does</span>
+      <h2 class="reveal" data-rev>Built for looking closely</h2>
+      <p class="reveal" data-rev>Every file is decoded locally at its original sample rate. Nothing is uploaded, and source files are never modified.</p>
     </div>
-    <div class="grid">
-      <div class="card">
+    <div class="grid" id="feature-grid">
+      <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 10v4m4-8v12m5-15v18m5-15v12m4-8v4"/></svg></div>
         <h3>GPU spectrogram</h3>
         <p>WebGL rendering with FFT sizes from 512 to 8192 and a Hann window. Intensity is stored at 16-bit precision, so quiet detail survives.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
         <h3>Zoom and inspect</h3>
         <p>Scroll to zoom time, Shift+scroll for frequency, drag to pan. The cursor reports exact time, frequency and level from the nearest FFT sample.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/></svg></div>
         <h3>A/B comparison</h3>
-        <p>Load two files into split view with shared time, frequency and FFT controls. Switching the audible source keeps the same absolute playback position.</p>
+        <p>Load two files into split view with shared time, frequency and FFT controls. Switching the audible source keeps the same absolute position.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h3l3-7 4 14 3-7h5"/></svg></div>
         <h3>Three palettes</h3>
         <p>Tri-band maps intensity from blue through amber to white. Ice and Fire are there too, and the player waveform follows whichever you pick.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg></div>
         <h3>PNG export</h3>
         <p>Save exactly what you are looking at — the current single or split view with its visible axes and a palette legend.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6z"/></svg></div>
         <h3>Offline by design</h3>
         <p>The renderer is sandboxed, navigation and popups are blocked, and the app makes no network requests at all.</p>
       </div>
     </div>
+
+    <div class="stats" id="stats">
+      <div class="stat reveal" data-rev><div class="n" data-count="8192">0</div><div class="l">Maximum FFT size</div></div>
+      <div class="stat reveal" data-rev><div class="n" data-count="4096">0</div><div class="l">Time columns analysed</div></div>
+      <div class="stat reveal" data-rev><div class="n" data-count="100" data-prefix="−" data-suffix=" dB">0</div><div class="l">Intensity floor</div></div>
+      <div class="stat reveal" data-rev><div class="n" data-count="16" data-suffix="-bit">0</div><div class="l">Spectrum texture</div></div>
+    </div>
   </div>
 </section>
 
-<section id="formats" style="background:var(--panel);border-block:1px solid var(--line)">
+<section id="compare" style="background:var(--panel);border-block:1px solid var(--line)">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">Audio support</span>
-      <h2>Decoded by a bundled FFmpeg</h2>
-      <p>These formats are covered by generated-file regression checks on every build:</p>
+      <span class="eyebrow reveal" data-rev>A/B comparison</span>
+      <h2 class="reveal" data-rev>Two files, one set of axes</h2>
+      <p class="reveal" data-rev>Split view stacks both spectrograms on shared time and frequency axes, so a missing top octave or a different noise floor is visible at a glance.</p>
     </div>
-    <div class="formats">
-      <span class="chip strong">WAV</span><span class="chip strong">AIFF</span>
-      <span class="chip strong">FLAC</span><span class="chip strong">ALAC</span>
-      <span class="chip strong">MP3</span><span class="chip strong">AAC</span>
+    <div class="frame reveal" data-rev style="margin-top:44px">
+      <div class="bar"><b></b><b></b><b></b><span>Audiskope · split view</span></div>
+      <img src="assets/shot-compare.jpg" width="1960" height="1203" loading="lazy"
+           alt="Audiskope in split view: two spectrograms stacked on shared axes, the upper one lacking content above 15 kHz.">
     </div>
-    <p style="color:var(--muted);margin-top:26px;font-size:14.5px">The picker also accepts these, subject to the codec and stream being valid:</p>
-    <div class="formats">
-      <span class="chip">OGG / Opus</span><span class="chip">WebM</span><span class="chip">CAF</span>
-      <span class="chip">WMA</span><span class="chip">APE</span><span class="chip">WavPack</span><span class="chip">MP4</span>
+  </div>
+</section>
+
+<div class="rule"><canvas id="rule2" aria-hidden="true"></canvas></div>
+
+<section id="formats">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow reveal" data-rev>Audio support</span>
+      <h2 class="reveal" data-rev>Decoded by a bundled FFmpeg</h2>
+      <p class="reveal" data-rev>These formats are covered by generated-file regression checks on every build:</p>
     </div>
-    <div class="note">
+    <div class="formats" id="chips-a">
+      <span class="chip strong reveal" data-rev>WAV</span><span class="chip strong reveal" data-rev>AIFF</span>
+      <span class="chip strong reveal" data-rev>FLAC</span><span class="chip strong reveal" data-rev>ALAC</span>
+      <span class="chip strong reveal" data-rev>MP3</span><span class="chip strong reveal" data-rev>AAC</span>
+    </div>
+    <p class="reveal" data-rev style="color:var(--muted);margin-top:28px;font-size:14.5px">The picker also accepts these, subject to the codec and stream being valid:</p>
+    <div class="formats" id="chips-b">
+      <span class="chip reveal" data-rev>OGG / Opus</span><span class="chip reveal" data-rev>WebM</span><span class="chip reveal" data-rev>CAF</span>
+      <span class="chip reveal" data-rev>WMA</span><span class="chip reveal" data-rev>APE</span><span class="chip reveal" data-rev>WavPack</span><span class="chip reveal" data-rev>MP4</span>
+    </div>
+    <div class="note reveal" data-rev>
       <strong style="color:var(--text)">Worth knowing.</strong>
       Analysis currently uses channel 1; playback preserves all channels. Each file has a
       256&nbsp;MB decoded-PCM limit and a two-minute decode timeout. Up to 4096 time columns are
@@ -259,50 +304,30 @@ footer{border-top:1px solid var(--line);padding-block:44px;color:var(--dim);font
 <section id="download">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">Download</span>
-      <h2>Get Audiskope</h2>
-      <p id="release-line">Installers are published with each release, alongside per-target license notices, a source archive and SHA-256 checksums.</p>
+      <span class="eyebrow reveal" data-rev>Download</span>
+      <h2 class="reveal" data-rev>Get Audiskope</h2>
+      <p class="reveal" data-rev>Installers are published with each release, alongside per-target license notices, a source archive and SHA-256 checksums.</p>
     </div>
-
     <div class="dl-grid" id="dl-grid">
-      <a class="dl" data-match="mac-arm64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">macOS</span>
-        <span class="arch">Apple Silicon</span>
-        <span class="meta">.dmg</span>
-      </a>
-      <a class="dl" data-match="mac-x64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">macOS</span>
-        <span class="arch">Intel</span>
-        <span class="meta">.dmg</span>
-      </a>
-      <a class="dl" data-match="win-x64.exe" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">Windows</span>
-        <span class="arch">x64 installer</span>
-        <span class="meta">.exe</span>
-      </a>
-      <a class="dl" data-match="x86_64.AppImage" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">Linux</span>
-        <span class="arch">AppImage</span>
-        <span class="meta">.AppImage</span>
-      </a>
-      <a class="dl" data-match="amd64.deb" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">Linux</span>
-        <span class="arch">Debian / Ubuntu</span>
-        <span class="meta">.deb</span>
-      </a>
-      <a class="dl" href="https://github.com/kmelitzanis/audiskope#run-from-source">
-        <span class="os">Build from source</span>
-        <span class="arch">Node 22 + pnpm</span>
-        <span class="meta">git clone</span>
-      </a>
+      <a class="dl reveal" data-rev data-match="mac-arm64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
+        <span class="os">macOS</span><span class="arch">Apple Silicon</span><span class="meta">.dmg</span></a>
+      <a class="dl reveal" data-rev data-match="mac-x64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
+        <span class="os">macOS</span><span class="arch">Intel</span><span class="meta">.dmg</span></a>
+      <a class="dl reveal" data-rev data-match="win-x64.exe" href="https://github.com/kmelitzanis/audiskope/releases/latest">
+        <span class="os">Windows</span><span class="arch">x64 installer</span><span class="meta">.exe</span></a>
+      <a class="dl reveal" data-rev data-match="x86_64.AppImage" href="https://github.com/kmelitzanis/audiskope/releases/latest">
+        <span class="os">Linux</span><span class="arch">AppImage</span><span class="meta">.AppImage</span></a>
+      <a class="dl reveal" data-rev data-match="amd64.deb" href="https://github.com/kmelitzanis/audiskope/releases/latest">
+        <span class="os">Linux</span><span class="arch">Debian / Ubuntu</span><span class="meta">.deb</span></a>
+      <a class="dl reveal" data-rev href="https://github.com/kmelitzanis/audiskope#run-from-source">
+        <span class="os">Build from source</span><span class="arch">Node 22 + pnpm</span><span class="meta">git clone</span></a>
     </div>
-
-    <div class="note">
+    <div class="note reveal" data-rev>
       <strong style="color:var(--text)">First launch on macOS.</strong>
       Builds are signed ad-hoc but not notarized, so macOS blocks the first open.
       Use <strong style="color:var(--text)">Control-click → Open</strong> and confirm, or clear the
       quarantine attribute:
-      <code style="display:block;margin-top:10px;font-family:var(--mono);font-size:12.5px;color:var(--accent);overflow-x:auto">xattr -dr com.apple.quarantine /Applications/Audiskope.app</code>
+      <code>xattr -dr com.apple.quarantine /Applications/Audiskope.app</code>
     </div>
   </div>
 </section>
@@ -321,45 +346,7 @@ footer{border-top:1px solid var(--line);padding-block:44px;color:var(--dim);font
   </div>
 </footer>
 
-<script>
-// Point the download cards at the current release's real assets. The static
-// hrefs already resolve to the releases page, so a failed or rate-limited
-// request simply leaves working links behind.
-(async () => {
-  const repo = 'kmelitzanis/audiskope';
-  try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
-    if (!res.ok) return;
-    const release = await res.json();
-    const assets = release.assets || [];
-    const mb = n => (n / 1048576).toFixed(1) + ' MB';
-
-    for (const card of document.querySelectorAll('.dl[data-match]')) {
-      const asset = assets.find(a => a.name.endsWith(card.dataset.match));
-      if (!asset) continue;
-      card.href = asset.browser_download_url;
-      card.querySelector('.meta').textContent =
-        card.dataset.match.replace(/^.*(\.[^.]+)$/, '$1') + ' · ' + mb(asset.size);
-    }
-
-    const tag = release.tag_name;
-    document.getElementById('version-note').innerHTML =
-      `${tag} · GPL-3.0 · no account, no telemetry, no network access`;
-
-    // Offer the visitor's own platform first.
-    const ua = navigator.userAgent;
-    const mac = /Mac/.test(ua), win = /Win/.test(ua);
-    const wanted = mac ? (navigator.maxTouchPoints > 2 || /arm|aarch/i.test(ua) ? 'mac-arm64.dmg' : 'mac-arm64.dmg')
-                 : win ? 'win-x64.exe' : 'x86_64.AppImage';
-    const match = assets.find(a => a.name.endsWith(wanted));
-    if (match) {
-      const btn = document.getElementById('primary-dl');
-      btn.href = match.browser_download_url;
-      btn.lastChild.textContent = ` Download for ${mac ? 'macOS' : win ? 'Windows' : 'Linux'}`;
-    }
-  } catch (_) { /* keep the static links */ }
-})();
-</script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/4.5.0/anime.umd.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

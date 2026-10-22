@@ -56,7 +56,13 @@ A build reported as *damaged* rather than *unverified* means its signature is in
 
 ## Website
 
-The landing page lives in `site/` as plain HTML with inline CSS, no build step. `.github/workflows/pages.yml` publishes it to GitHub Pages on any push to `main` that touches `site/`. Download links and file sizes are filled in at runtime from the GitHub releases API, so the page does not need rebuilding for a new release; if that request fails the static links still resolve to the releases page.
+The landing page lives in `site/` as plain HTML, CSS and one script, with no build step. `.github/workflows/pages.yml` publishes it to GitHub Pages on any push to `main` that touches `site/`.
+
+`site/app.js` synthesises a toy spectrum and renders it as a live scrolling spectrogram, an analyser strip and the animated mark, reusing the palette functions from the renderer's shader so the colours match the application. Choreography uses anime.js from a CDN. The page degrades in stages: without anime.js the content is revealed immediately, without `app.js` nothing is ever hidden, and `prefers-reduced-motion` renders a single static frame instead of animating.
+
+Download links and file sizes are filled in at runtime from the GitHub releases API, so the page does not need rebuilding for a new release; if that request fails the static links still resolve to the releases page.
+
+Screenshots in `site/assets/` are captured from the real application by driving Electron; regenerate them rather than editing by hand.
 
 Preview it with any static server, for example `python3 -m http.server --directory site 8000`.
 
