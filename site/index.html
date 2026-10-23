@@ -161,7 +161,13 @@ section{padding-block:100px;position:relative}
   border-radius:14px;padding:25px;text-decoration:none;
   transition:border-color .22s,transform .22s,background .22s}
 .dl:hover{border-color:var(--accent-2);background:#161a1f;transform:translateY(-3px)}
-.dl .os{font-weight:640;font-size:15.5px}
+.dl .os{font-weight:640;font-size:15.5px;display:flex;align-items:center;gap:11px}
+.dl .plat{width:20px;height:20px;flex:none;color:var(--muted);transition:color .22s}
+.dl .plat.fill{fill:currentColor}
+.dl .plat.img{opacity:.78;transition:opacity .22s}
+.dl:hover .plat.img{opacity:1}
+.dl .plat.line{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dl:hover .plat{color:var(--accent)}
 .dl .meta{color:var(--dim);font-size:13px;font-family:var(--mono)}
 .dl .arch{color:var(--muted);font-size:13.5px}
 
@@ -352,17 +358,17 @@ footer{border-top:1px solid var(--line);padding-block:48px;color:var(--dim);font
     </div>
     <div class="dl-grid">
       <a class="dl reveal" data-rev data-match="mac-arm64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">macOS</span><span class="arch">Apple Silicon</span><span class="meta">.dmg</span></a>
+        <span class="os"><svg class="plat fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 12.5c-.02-2.2 1.8-3.25 1.88-3.3-1.02-1.5-2.6-1.71-3.17-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.75-.78-2.87-.76-1.48.02-2.84.86-3.6 2.18-1.54 2.67-.39 6.6 1.1 8.77.73 1.06 1.6 2.25 2.74 2.2 1.1-.04 1.51-.71 2.84-.71 1.33 0 1.7.71 2.86.69 1.18-.02 1.93-1.08 2.65-2.14.84-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.5zM14.9 5.6c.6-.74 1.01-1.76.9-2.78-.87.04-1.93.58-2.56 1.31-.56.65-1.05 1.69-.92 2.69.97.07 1.96-.49 2.58-1.22z"/></svg>macOS</span><span class="arch">Apple Silicon</span><span class="meta">.dmg</span></a>
       <a class="dl reveal" data-rev data-match="mac-x64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">macOS</span><span class="arch">Intel</span><span class="meta">.dmg</span></a>
+        <span class="os"><svg class="plat fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 12.5c-.02-2.2 1.8-3.25 1.88-3.3-1.02-1.5-2.6-1.71-3.17-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.75-.78-2.87-.76-1.48.02-2.84.86-3.6 2.18-1.54 2.67-.39 6.6 1.1 8.77.73 1.06 1.6 2.25 2.74 2.2 1.1-.04 1.51-.71 2.84-.71 1.33 0 1.7.71 2.86.69 1.18-.02 1.93-1.08 2.65-2.14.84-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.5zM14.9 5.6c.6-.74 1.01-1.76.9-2.78-.87.04-1.93.58-2.56 1.31-.56.65-1.05 1.69-.92 2.69.97.07 1.96-.49 2.58-1.22z"/></svg>macOS</span><span class="arch">Intel</span><span class="meta">.dmg</span></a>
       <a class="dl reveal" data-rev data-match="win-x64.exe" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">Windows</span><span class="arch">x64 installer</span><span class="meta">.exe</span></a>
+        <span class="os"><svg class="plat fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.9 10.2 4.9v6.86H3zM11.4 4.73 21 3.4v8.36h-9.6zM3 12.9h7.2v6.86L3 18.78zM11.4 12.9H21v8.36l-9.6-1.33z"/></svg>Windows</span><span class="arch">x64 installer</span><span class="meta">.exe</span></a>
       <a class="dl reveal" data-rev data-match="x86_64.AppImage" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">Linux</span><span class="arch">AppImage</span><span class="meta">.AppImage</span></a>
+        <span class="os"><img class="plat img" src="assets/tux.svg" alt="" width="20" height="20">Linux</span><span class="arch">AppImage</span><span class="meta">.AppImage</span></a>
       <a class="dl reveal" data-rev data-match="amd64.deb" href="https://github.com/kmelitzanis/audiskope/releases/latest">
-        <span class="os">Linux</span><span class="arch">Debian / Ubuntu</span><span class="meta">.deb</span></a>
+        <span class="os"><svg class="plat fill" viewBox="11.1 14.25 47.5 47.5" aria-hidden="true"><path d="M50.6667 14.25C53.29 14.25 55.4167 16.3767 55.4167 19C55.4167 21.6234 53.29 23.75 50.6667 23.75C48.0433 23.75 45.9167 21.6234 45.9167 19C45.9167 16.3767 48.0433 14.25 50.6667 14.25ZM49.0833 52.25C51.7067 52.25 53.8333 54.3767 53.8333 57C53.8333 59.6234 51.7067 61.75 49.0833 61.75C46.46 61.75 44.3333 59.6234 44.3333 57C44.3333 54.3767 46.46 52.25 49.0833 52.25ZM17.4167 33.25C20.04 33.25 22.1667 35.3767 22.1667 38C22.1667 40.6234 20.04 42.75 17.4167 42.75C14.7933 42.75 12.6667 40.6234 12.6667 38C12.6667 35.3767 14.7933 33.25 17.4167 33.25ZM24.5417 38C24.5417 35.0403 22.7371 32.5021 20.1681 31.4257C22.8433 24.1723 29.8176 19 38 19C39.9455 19 41.8228 19.2924 43.5902 19.8357C44.0039 23.3769 47.0143 26.125 50.6667 26.125C51.3414 26.125 51.9943 26.0312 52.613 25.8559C55.3524 29.1486 57 33.3819 57 38C57 42.8346 55.1943 47.2475 52.2205 50.601C51.2739 50.1361 50.2091 49.875 49.0833 49.875C45.2878 49.875 42.1854 52.8429 41.9702 56.5846C40.6898 56.8568 39.3616 57 38 57C29.8176 57 22.8433 51.8277 20.1681 44.5743C22.7371 43.4979 24.5417 40.9597 24.5417 38ZM38 26.9167C31.8788 26.9167 26.9167 31.8789 26.9167 38C26.9167 44.1212 31.8788 49.0833 38 49.0833C44.1211 49.0833 49.0833 44.1212 49.0833 38C49.0833 31.8789 44.1212 26.9167 38 26.9167Z"/></svg>Linux</span><span class="arch">Debian / Ubuntu</span><span class="meta">.deb</span></a>
       <a class="dl reveal" data-rev href="https://github.com/kmelitzanis/audiskope#run-from-source">
-        <span class="os">Build from source</span><span class="arch">Node 22 + pnpm</span><span class="meta">git clone</span></a>
+        <span class="os"><svg class="plat line" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.6" y="4.4" width="18.8" height="15.2" rx="2.4"/><path d="m7 10 2.6 2.2L7 14.4M12.6 15h4.2"/></svg>Build from source</span><span class="arch">Node 22 + pnpm</span><span class="meta">git clone</span></a>
     </div>
     <div class="note reveal" data-rev>
       <strong style="color:var(--text)">First launch on macOS.</strong>
