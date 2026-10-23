@@ -11,13 +11,13 @@
 <meta property="og:title" content="Audiskope — desktop spectrogram analyzer">
 <meta property="og:description" content="Inspect and compare audio files with a GPU-accelerated spectrogram. Free and open source.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="assets/shot-triband.jpg">
+<meta property="og:image" content="assets/app-triband.jpg">
 <style>
 :root{
-  --bg:#0b0c0e; --panel:#141619; --raised:#1a1d21; --line:#272b31;
-  --text:#e9eaec; --muted:#99a0a7; --dim:#6a7178;
+  --bg:#08090b; --panel:#101216; --raised:#171a1f; --line:#23272d; --line-2:#2e333a;
+  --text:#eceef0; --muted:#9aa1a9; --dim:#6b727a;
   --accent:#21b9ed; --accent-2:#1a8fb8; --amber:#ff8f12;
-  --radius:12px;
+  --ramp:linear-gradient(90deg,#05070d 0%,#1a6ee0 46%,#ff8f12 82%,#fff7e6 100%);
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -25,132 +25,147 @@ html{scroll-behavior:smooth}
 body{
   background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
-  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
 img{max-width:100%;height:auto;display:block}
 a{color:inherit}
-.wrap{max-width:1140px;margin:0 auto;padding-inline:24px}
-.eyebrow{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--dim);font-weight:500}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:24px}
+.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);font-weight:500}
 
 /* ---------------- header ---------------- */
-header{position:sticky;top:0;z-index:50;background:rgba(11,12,14,.78);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.nav{display:flex;align-items:center;gap:14px;height:62px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.3px;text-decoration:none;font-size:17px}
-.brand canvas{width:26px;height:26px;border-radius:7px;background:#17191d}
-.nav-links{margin-left:auto;display:flex;align-items:center;gap:22px;font-size:14px}
+header{position:sticky;top:0;z-index:50;background:rgba(8,9,11,.74);
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:14px;height:64px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:650;letter-spacing:-.3px;
+  text-decoration:none;font-size:17px}
+.brand canvas{width:27px;height:27px;border-radius:7px;background:#17191d}
+.nav-links{margin-left:auto;display:flex;align-items:center;gap:24px;font-size:14px}
 .nav-links a{color:var(--muted);text-decoration:none;transition:color .2s}
 .nav-links a:hover{color:var(--text)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:11px 18px;border-radius:8px;
-  border:1px solid var(--line);background:var(--raised);color:var(--text);text-decoration:none;
-  font-size:14px;font-weight:550;white-space:nowrap;transition:border-color .2s,background .2s,transform .2s}
-.btn:hover{border-color:#4a5058;background:#22262b}
-.btn-primary{background:var(--accent);border-color:var(--accent);color:#06222c;font-weight:680}
-.btn-primary:hover{background:#44ccf7;border-color:#44ccf7}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:11px 19px;border-radius:9px;border:1px solid var(--line-2);
+  background:var(--raised);color:var(--text);text-decoration:none;
+  font-size:14px;font-weight:560;white-space:nowrap;
+  transition:border-color .2s,background .2s,transform .2s,box-shadow .2s}
+.btn:hover{border-color:#4b525b;background:#1e2228;transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(180deg,#36c4f0,#1ba6dc);border-color:#49cdf5;
+  color:#04202b;font-weight:680;box-shadow:0 8px 26px -10px rgba(33,185,237,.75)}
+.btn-primary:hover{background:linear-gradient(180deg,#4fd0f7,#23b4ea);border-color:#6ad8f8}
 .btn svg{width:17px;height:17px;flex:none}
 
 /* ---------------- hero ---------------- */
-.hero{position:relative;padding-block:92px 0;text-align:center;isolation:isolate}
-/* The hero is far taller than the viewport, so the band is pinned to the top
-   rather than centred in it. */
-#hero-spectro{position:absolute;top:0;left:0;right:0;height:min(760px,100%);
-  z-index:-2;overflow:hidden;opacity:.8}
-#hero-spectro img{position:absolute;top:0;left:0;height:100%;width:auto;
-  min-width:100%;max-width:none;will-change:transform;transition:opacity .45s}
-#hero-spectro img+img{opacity:0}
-.hero-fade{position:absolute;inset:0;z-index:-1;pointer-events:none;
+.hero{position:relative;padding-block:104px 0;text-align:center;isolation:isolate;overflow:hidden}
+/* Decorative only: a glow plus a frequency-ruler pattern. No product imagery. */
+.hero::before{
+  content:"";position:absolute;left:50%;top:-180px;width:1200px;height:760px;
+  transform:translateX(-50%);z-index:-3;pointer-events:none;
   background:
-    radial-gradient(ellipse 56% 34% at 50% 26%,rgba(11,12,14,.9) 8%,rgba(11,12,14,.55) 54%,transparent 84%),
-    linear-gradient(to bottom,rgba(11,12,14,.62) 0%,transparent 30%,rgba(11,12,14,.6) 62%,var(--bg) 78%)}
-.hero h1{font-size:clamp(36px,6.6vw,66px);line-height:1.04;letter-spacing:-2px;font-weight:700;margin:20px 0 0}
+    radial-gradient(ellipse 48% 46% at 50% 42%,rgba(33,185,237,.22),transparent 68%),
+    radial-gradient(ellipse 30% 34% at 72% 58%,rgba(255,143,18,.11),transparent 70%);
+  filter:blur(6px);
+}
+.hero::after{
+  content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(90deg,
+    rgba(255,255,255,.05) 0 1px,transparent 1px 7px);
+  mask-image:radial-gradient(ellipse 72% 58% at 50% 34%,#000 10%,transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse 72% 58% at 50% 34%,#000 10%,transparent 78%);
+}
+.hero h1{font-size:clamp(38px,6.8vw,70px);line-height:1.03;letter-spacing:-2.2px;
+  font-weight:700;margin:22px 0 0}
 .hero h1 .ch{display:inline-block;will-change:transform,opacity}
 .js .hero h1 .ch{opacity:0;transform:translateY(26px);
   transition:opacity .6s ease-out,transform .6s cubic-bezier(.22,1,.36,1)}
 .js .hero h1 .ch.in{opacity:1;transform:none}
+.hero h1 .grad{display:inline-block;
+  background:linear-gradient(96deg,var(--accent) 4%,#95dcf3 46%,var(--amber) 99%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  will-change:transform,opacity}
 .js .hero h1 .grad{opacity:0;transform:translateY(30px);
   transition:opacity .75s ease-out,transform .75s cubic-bezier(.22,1,.36,1)}
 .js .hero h1 .grad.in{opacity:1;transform:none}
-.hero h1 .grad{display:inline-block;background:linear-gradient(94deg,var(--accent) 6%,#8fd9f2 44%,var(--amber) 98%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;will-change:transform,opacity}
-.hero .lede{color:var(--muted);font-size:clamp(16px,2.3vw,19px);max-width:600px;margin:20px auto 0}
-.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:32px}
-.cta-note{margin-top:15px;font-size:13px;color:var(--dim);font-family:var(--mono)}
+.hero .lede{color:var(--muted);font-size:clamp(16px,2.3vw,19.5px);max-width:610px;margin:22px auto 0}
+.cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:34px}
+.cta-note{margin-top:16px;font-size:12.5px;color:var(--dim);font-family:var(--mono)}
 
-/* live analyser strip */
-.analyser{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:54px;margin-top:40px}
-.analyser i{width:4px;border-radius:2px;background:linear-gradient(to top,var(--accent-2),var(--accent));
-  height:6px;display:block;will-change:height}
+/* live analyser, driven by the showcase image's own pixels */
+.analyser{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:56px;margin-top:46px}
+.analyser i{width:4px;border-radius:2px;height:5px;display:block;will-change:height;
+  background:linear-gradient(to top,#126b8d,var(--accent))}
 
 /* ---------------- showcase ---------------- */
-.showcase{margin-top:44px;position:relative}
-.frame{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);position:relative;
-  box-shadow:0 40px 90px -34px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.025)}
-.frame.bare{border:0;background:transparent;box-shadow:none;border-radius:0}
-.frame .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:#101216}
-.frame .bar b{width:10px;height:10px;border-radius:50%;background:#2e333a;display:block}
-.frame .bar span{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
-.stack{position:relative}
-.stack img{width:100%;display:block}
-.stack img{transition:opacity .45s ease}
+.showcase{margin-top:50px;position:relative}
+.stack{position:relative;border-radius:14px;overflow:hidden}
+.stack img{width:100%;display:block;transition:opacity .45s ease}
 .stack img+img{position:absolute;inset:0;opacity:0}
-.switch{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
-.switch button{font:inherit;font-size:13px;padding:8px 16px;border-radius:999px;cursor:pointer;
-  border:1px solid var(--line);background:var(--panel);color:var(--muted);transition:all .22s}
-.switch button:hover{color:var(--text);border-color:#454b53}
-.switch button[aria-pressed=true]{color:var(--text);border-color:var(--accent);background:rgba(33,185,237,.1)}
+.switch{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px}
+.switch button{font:inherit;font-size:13px;padding:9px 18px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line-2);background:var(--panel);color:var(--muted);transition:all .22s}
+.switch button:hover{color:var(--text);border-color:#4b525b}
+.switch button[aria-pressed=true]{color:#06222c;border-color:var(--accent);
+  background:var(--accent);font-weight:620}
+
+/* ---------------- spectrum rule ---------------- */
+/* The application's own intensity ramp, used as a divider. */
+.rule{height:3px;background:var(--ramp);opacity:.75;position:relative;overflow:hidden}
+.rule::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:translateX(-100%)}
+.js .rule::after{animation:sheen 7s linear infinite}
+@keyframes sheen{0%{transform:translateX(-100%)}60%,100%{transform:translateX(220%)}}
 
 /* ---------------- sections ---------------- */
-section{padding-block:96px;position:relative}
-.sec-head{max-width:680px}
-.sec-head h2{font-size:clamp(26px,3.8vw,38px);letter-spacing:-1px;font-weight:680;margin-top:12px}
-.sec-head p{color:var(--muted);margin-top:14px}
+section{padding-block:100px;position:relative}
+.sec-head{max-width:690px}
+.sec-head h2{font-size:clamp(27px,3.9vw,40px);letter-spacing:-1.1px;font-weight:680;margin-top:13px}
+.sec-head p{color:var(--muted);margin-top:15px}
 .js .reveal{opacity:0;transform:translateY(22px);will-change:transform,opacity;
   transition:opacity .62s ease-out,transform .62s cubic-bezier(.22,1,.36,1)}
 .js .reveal.in{opacity:1;transform:none}
 
-.grid{display:grid;gap:18px;margin-top:46px;grid-template-columns:repeat(auto-fit,minmax(272px,1fr))}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px;
-  position:relative;overflow:hidden;transition:border-color .25s,transform .25s}
-.card:hover{border-color:#3c434b;transform:translateY(-3px)}
-.card h3{font-size:16.5px;font-weight:640;margin-bottom:9px;letter-spacing:-.2px}
+.grid{display:grid;gap:18px;margin-top:48px;grid-template-columns:repeat(auto-fit,minmax(276px,1fr))}
+.card{background:linear-gradient(180deg,#13161a,var(--panel));
+  border:1px solid var(--line);border-radius:14px;padding:27px;position:relative;overflow:hidden;
+  transition:border-color .25s,transform .25s}
+.card::before{content:"";position:absolute;top:0;left:22px;right:22px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(33,185,237,.4),transparent);opacity:0;
+  transition:opacity .25s}
+.card:hover{border-color:#39414a;transform:translateY(-3px)}
+.card:hover::before{opacity:1}
+.card h3{font-size:16.5px;font-weight:640;margin-bottom:10px;letter-spacing:-.2px}
 .card p{color:var(--muted);font-size:14.5px}
-.card .ic{width:36px;height:36px;border-radius:9px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;
-  background:rgba(33,185,237,.1);color:var(--accent)}
-.card .ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.card .ic{width:37px;height:37px;border-radius:10px;margin-bottom:17px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(33,185,237,.1);color:var(--accent);border:1px solid rgba(33,185,237,.18)}
+.card .ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
 
-/* stats */
-.stats{display:grid;gap:18px;margin-top:46px;grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
-.stat .n{font-size:34px;font-weight:700;letter-spacing:-1.3px;font-family:var(--mono);
-  background:linear-gradient(180deg,var(--text),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
-.stat .l{color:var(--muted);font-size:13.5px;margin-top:5px}
+.stats{display:grid;gap:18px;margin-top:48px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:25px}
+.stat .n{font-size:35px;font-weight:700;letter-spacing:-1.4px;font-family:var(--mono);
+  background:linear-gradient(180deg,var(--text),var(--accent));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .l{color:var(--muted);font-size:13.5px;margin-top:6px}
 
-/* formats */
-.formats{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
-.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border:1px solid var(--line);border-radius:7px;
-  background:var(--panel);color:var(--muted)}
+.formats{display:flex;flex-wrap:wrap;gap:9px;margin-top:28px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 14px;border:1px solid var(--line);
+  border-radius:8px;background:var(--panel);color:var(--muted)}
 .chip.strong{color:var(--accent);border-color:rgba(33,185,237,.34);background:rgba(33,185,237,.07)}
-.note{margin-top:28px;padding:18px 20px;border-left:2px solid var(--accent-2);background:var(--panel);
-  border-radius:0 10px 10px 0;color:var(--muted);font-size:14.5px}
-.note code{display:block;margin-top:10px;font-family:var(--mono);font-size:12.5px;color:var(--accent);overflow-x:auto}
+.note{margin-top:30px;padding:19px 22px;border-left:2px solid var(--accent-2);
+  background:var(--panel);border-radius:0 12px 12px 0;color:var(--muted);font-size:14.5px}
+.note code{display:block;margin-top:11px;font-family:var(--mono);font-size:12.5px;
+  color:var(--accent);overflow-x:auto}
 
-/* downloads */
-.dl-grid{display:grid;gap:14px;margin-top:42px;grid-template-columns:repeat(auto-fit,minmax(252px,1fr))}
+.dl-grid{display:grid;gap:14px;margin-top:44px;grid-template-columns:repeat(auto-fit,minmax(254px,1fr))}
 .dl{display:flex;flex-direction:column;gap:5px;background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--radius);padding:24px;text-decoration:none;transition:border-color .22s,transform .22s,background .22s}
-.dl:hover{border-color:var(--accent-2);background:#171b1f;transform:translateY(-3px)}
+  border-radius:14px;padding:25px;text-decoration:none;
+  transition:border-color .22s,transform .22s,background .22s}
+.dl:hover{border-color:var(--accent-2);background:#161a1f;transform:translateY(-3px)}
 .dl .os{font-weight:640;font-size:15.5px}
 .dl .meta{color:var(--dim);font-size:13px;font-family:var(--mono)}
 .dl .arch{color:var(--muted);font-size:13.5px}
 
-/* spectrum rule */
-.rule{height:92px;position:relative;overflow:hidden;border-block:1px solid var(--line);background:#0d0f12}
-/* Anchored, not transform-centred: anime.js drives translateX and would
-   otherwise overwrite a centring transform. */
-.rule img{position:absolute;bottom:0;left:0;width:max(200%,1400px);height:auto;
-  max-width:none;will-change:transform;opacity:.9}
-
-footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font-size:14px}
+footer{border-top:1px solid var(--line);padding-block:48px;color:var(--dim);font-size:14px}
 .foot{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
 .foot a{color:var(--muted);text-decoration:none}
 .foot a:hover{color:var(--text)}
@@ -158,15 +173,16 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
 
 @media(max-width:620px){
   .nav-links a:not(.btn){display:none}
-  section{padding-block:64px}
-  .hero{padding-top:60px}
-  .analyser{height:40px;gap:2px}
+  section{padding-block:66px}
+  .hero{padding-top:62px}
+  .analyser{height:42px;gap:2px}
   .analyser i{width:3px}
 }
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .js .reveal,.js .hero h1 .ch,.js .hero h1 .grad{opacity:1!important;transform:none!important;transition:none}
-  .card:hover,.dl:hover{transform:none}
+  .js .rule::after{animation:none}
+  .card:hover,.dl:hover,.btn:hover{transform:none}
 }
 </style>
 </head>
@@ -174,7 +190,7 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
 
 <header>
   <div class="wrap nav">
-    <a class="brand" href="#top"><canvas id="mark" width="52" height="52" aria-hidden="true"></canvas> audiskope</a>
+    <a class="brand" href="#top"><canvas id="mark" width="54" height="54" aria-hidden="true"></canvas> audiskope</a>
     <nav class="nav-links">
       <a href="#features">Features</a>
       <a href="#compare">Compare</a>
@@ -187,12 +203,6 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
 <main id="top">
 
 <div class="hero">
-  <div id="hero-spectro" aria-hidden="true">
-    <img src="assets/bg-triband.jpg" data-p="3band" alt="">
-    <img src="assets/bg-ice.jpg" data-p="ice" alt="" loading="lazy">
-    <img src="assets/bg-fire.jpg" data-p="fire" alt="" loading="lazy">
-  </div>
-  <div class="hero-fade"></div>
   <div class="wrap">
     <span class="eyebrow reveal" data-rev>Free &amp; open source · macOS · Windows · Linux</span>
     <h1 id="headline" data-line1="See what your audio" data-line2="is made of."></h1>
@@ -212,12 +222,13 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
     <div class="analyser" id="analyser" aria-hidden="true"></div>
 
     <div class="showcase reveal" data-rev>
-      <div class="frame">
-        <div class="stack" id="stack">
-          <img src="assets/spectro-triband.jpg" width="1596" height="566" data-p="3band" alt="A five-minute track analysed in Audiskope with the Tri-band palette: dense blue mid content, amber bass and the encoder's shelf near 20 kHz.">
-          <img src="assets/spectro-ice.jpg" width="1596" height="566" data-p="ice" alt="The same track with the Ice palette, with the cursor readout showing time, frequency and level." loading="lazy">
-          <img src="assets/spectro-fire.jpg" width="1596" height="566" data-p="fire" alt="The same track with the Fire palette." loading="lazy">
-        </div>
+      <div class="stack" id="stack">
+        <img id="sample-src" src="assets/app-triband.jpg" width="1880" height="1270" data-p="3band"
+             alt="Audiskope analysing a five-minute track with the Tri-band palette: dense blue mid content, amber bass and the encoder's shelf near 20 kHz.">
+        <img src="assets/app-ice.jpg" width="1880" height="1270" data-p="ice" loading="lazy"
+             alt="The same track rendered with the Ice palette.">
+        <img src="assets/app-fire.jpg" width="1880" height="1270" data-p="fire" loading="lazy"
+             alt="The same track rendered with the Fire palette.">
       </div>
       <div class="switch" id="switch" role="group" aria-label="Palette preview">
         <button data-p="3band" aria-pressed="true">Tri-band</button>
@@ -228,7 +239,7 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
   </div>
 </div>
 
-<div class="rule" id="rule1"><img src="assets/bg-triband.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+<div class="rule"></div>
 
 <section id="features">
   <div class="wrap">
@@ -237,7 +248,7 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
       <h2 class="reveal" data-rev>Built for looking closely</h2>
       <p class="reveal" data-rev>Every file is decoded locally at its original sample rate. Nothing is uploaded, and source files are never modified.</p>
     </div>
-    <div class="grid" id="feature-grid">
+    <div class="grid">
       <div class="card reveal" data-rev>
         <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 10v4m4-8v12m5-15v18m5-15v12m4-8v4"/></svg></div>
         <h3>GPU spectrogram</h3>
@@ -270,7 +281,7 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
       </div>
     </div>
 
-    <div class="stats" id="stats">
+    <div class="stats">
       <div class="stat reveal" data-rev><div class="n" data-count="8192">0</div><div class="l">Maximum FFT size</div></div>
       <div class="stat reveal" data-rev><div class="n" data-count="4096">0</div><div class="l">Time columns analysed</div></div>
       <div class="stat reveal" data-rev><div class="n" data-count="100" data-prefix="−" data-suffix=" dB">0</div><div class="l">Intensity floor</div></div>
@@ -286,15 +297,22 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
       <h2 class="reveal" data-rev>Two files, one set of axes</h2>
       <p class="reveal" data-rev>Split view stacks both spectrograms on shared time and frequency axes, so a missing top octave or a different noise floor is visible at a glance.</p>
     </div>
-    <div class="grid" style="margin-top:44px">
-      <div class="card reveal" data-rev><h3>Shared axes</h3><p>Both plots use one time range, one frequency range and one FFT size, so differences are differences in the audio rather than in the view.</p></div>
-      <div class="card reveal" data-rev><h3>Same instant</h3><p>Selecting A or B swaps the audible source without moving the playhead, so you hear the same bar of music from either file.</p></div>
-      <div class="card reveal" data-rev><h3>Honest limits</h3><p>There is no automatic alignment of leading silence, no loudness matching and no time stretching. What you load is what you compare.</p></div>
+    <div class="grid">
+      <div class="card reveal" data-rev>
+        <h3>Shared axes</h3>
+        <p>Both plots use one time range, one frequency range and one FFT size, so differences are differences in the audio rather than in the view.</p>
+      </div>
+      <div class="card reveal" data-rev>
+        <h3>Same instant</h3>
+        <p>Selecting A or B swaps the audible source without moving the playhead, so you hear the same bar of music from either file.</p>
+      </div>
+      <div class="card reveal" data-rev>
+        <h3>Honest limits</h3>
+        <p>There is no automatic alignment of leading silence, no loudness matching and no time stretching. What you load is what you compare.</p>
+      </div>
     </div>
   </div>
 </section>
-
-<div class="rule" id="rule2"><img src="assets/bg-fire.jpg" alt="" aria-hidden="true" loading="lazy"></div>
 
 <section id="formats">
   <div class="wrap">
@@ -303,13 +321,13 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
       <h2 class="reveal" data-rev>Decoded by a bundled FFmpeg</h2>
       <p class="reveal" data-rev>These formats are covered by generated-file regression checks on every build:</p>
     </div>
-    <div class="formats" id="chips-a">
+    <div class="formats">
       <span class="chip strong reveal" data-rev>WAV</span><span class="chip strong reveal" data-rev>AIFF</span>
       <span class="chip strong reveal" data-rev>FLAC</span><span class="chip strong reveal" data-rev>ALAC</span>
       <span class="chip strong reveal" data-rev>MP3</span><span class="chip strong reveal" data-rev>AAC</span>
     </div>
-    <p class="reveal" data-rev style="color:var(--muted);margin-top:28px;font-size:14.5px">The picker also accepts these, subject to the codec and stream being valid:</p>
-    <div class="formats" id="chips-b">
+    <p class="reveal" data-rev style="color:var(--muted);margin-top:30px;font-size:14.5px">The picker also accepts these, subject to the codec and stream being valid:</p>
+    <div class="formats">
       <span class="chip reveal" data-rev>OGG / Opus</span><span class="chip reveal" data-rev>WebM</span><span class="chip reveal" data-rev>CAF</span>
       <span class="chip reveal" data-rev>WMA</span><span class="chip reveal" data-rev>APE</span><span class="chip reveal" data-rev>WavPack</span><span class="chip reveal" data-rev>MP4</span>
     </div>
@@ -323,6 +341,8 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
   </div>
 </section>
 
+<div class="rule"></div>
+
 <section id="download">
   <div class="wrap">
     <div class="sec-head">
@@ -330,7 +350,7 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
       <h2 class="reveal" data-rev>Get Audiskope</h2>
       <p class="reveal" data-rev>Installers are published with each release, alongside per-target license notices, a source archive and SHA-256 checksums.</p>
     </div>
-    <div class="dl-grid" id="dl-grid">
+    <div class="dl-grid">
       <a class="dl reveal" data-rev data-match="mac-arm64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
         <span class="os">macOS</span><span class="arch">Apple Silicon</span><span class="meta">.dmg</span></a>
       <a class="dl reveal" data-rev data-match="mac-x64.dmg" href="https://github.com/kmelitzanis/audiskope/releases/latest">
@@ -368,7 +388,6 @@ footer{border-top:1px solid var(--line);padding-block:46px;color:var(--dim);font
   </div>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/4.5.0/anime.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

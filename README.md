@@ -56,15 +56,15 @@ A build reported as *damaged* rather than *unverified* means its signature is in
 
 ## Website
 
-The landing page lives in `site/` as plain HTML, CSS and one script, with no build step. `.github/workflows/pages.yml` publishes it to GitHub Pages on any push to `main` that touches `site/`.
+The landing page lives in `site/` as plain HTML, CSS and one script, with no build step or third-party runtime. `.github/workflows/pages.yml` publishes it to GitHub Pages on any push to `main` that touches `site/`, stamping the script URL with the commit so a cached copy can never pair with fresh markup.
 
-`site/assets/` holds crops of Audiskope's own output for a real track, exported from the application: `spectro-*.jpg` for the palette preview and `bg-*.jpg` for the drifting backdrops. `site/app.js` samples those pixels to drive the analyser bars, so the bars show the track's actual spectrum. Choreography uses anime.js from a CDN for the drifting backdrops only. Visibility never depends on it: reveals and the headline are CSS transitions toggled by a class, because anime.js parks its engine while the document is hidden and a page opened in a background tab would otherwise stay blank. Without `app.js` nothing is hidden in the first place, and `prefers-reduced-motion` skips the transitions.
+`site/assets/app-*.jpg` are captures of the application itself, one per palette, with the source filename replaced by a placeholder. They appear only in the showcase; everything else on the page is drawn with CSS so the design does not lean on product screenshots. `site/app.js` samples the plot area of whichever capture is on screen to drive the analyser bars.
+
+Visibility is CSS-only by design. Reveals and the headline are class-toggled transitions, never animation-library output, so a page opened in a background tab cannot end up blank; a four-second fallback reveals anything the observer missed, and `prefers-reduced-motion` skips the transitions entirely.
 
 Download links and file sizes are filled in at runtime from the GitHub releases API, so the page does not need rebuilding for a new release; if that request fails the static links still resolve to the releases page.
 
-Replace the imagery by exporting a fresh analysis from the application and cropping the plot area; synthetic test tones do not look like music and should not be used.
-
-Preview it with any static server, for example `python3 -m http.server --directory site 8000`.
+Replace the imagery by exporting a fresh analysis from the application and cropping to the window; synthetic test tones do not look like music and should not be used.
 
 ## Development and packaging
 
