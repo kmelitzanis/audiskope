@@ -64,6 +64,8 @@ Visibility is CSS-only by design. Reveals and the headline are class-toggled tra
 
 The download cards carry platform marks: the Apple, Windows and terminal glyphs are drawn inline, `site/assets/tux.svg` is the Tux artwork with its editor metadata stripped, and the Ubuntu circle of friends is inlined so it can be tinted on a dark card. These are third-party marks used to identify which build each card points at, not an endorsement by their owners.
 
+The footer carries a Buy Me a Coffee link styled to match the one on the oikolog site, which is why the page requests the Cookie font from Google Fonts — the only third-party request it makes. Drop the font link and the button falls back to the system stack.
+
 Download links and file sizes are filled in at runtime from the GitHub releases API, so the page does not need rebuilding for a new release; if that request fails the static links still resolve to the releases page.
 
 Replace the imagery by exporting a fresh analysis from the application and cropping to the window; synthetic test tones do not look like music and should not be used.

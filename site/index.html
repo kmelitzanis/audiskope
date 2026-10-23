@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audiskope — desktop spectrogram analyzer</title>
 <meta name="description" content="A minimal desktop spectrogram analyzer for inspecting and comparing audio files. Free and open source, for macOS, Windows and Linux.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cookie&display=swap" rel="stylesheet">
 <link rel="icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <meta property="og:title" content="Audiskope — desktop spectrogram analyzer">
@@ -176,6 +179,15 @@ footer{border-top:1px solid var(--line);padding-block:48px;color:var(--dim);font
 .foot a{color:var(--muted);text-decoration:none}
 .foot a:hover{color:var(--text)}
 .foot-links{display:flex;flex-wrap:wrap;gap:20px}
+.foot-right{display:flex;flex-wrap:wrap;align-items:center;gap:22px}
+.foot .bmc{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px 0 10px;
+  border-radius:999px;background:#ffdd00;color:#0f172a;text-decoration:none;
+  font:400 1.15rem/1 'Cookie','Inter',system-ui,sans-serif;
+  box-shadow:0 6px 18px rgba(255,221,0,.18);
+  transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s ease}
+.foot .bmc svg{width:20px;height:20px;flex-shrink:0;transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.foot .bmc:hover{color:#0f172a;transform:translateY(-2px);box-shadow:0 10px 26px rgba(255,221,0,.32)}
+.foot .bmc:hover svg{transform:rotate(-12deg)}
 
 @media(max-width:620px){
   .nav-links a:not(.btn){display:none}
@@ -385,11 +397,14 @@ footer{border-top:1px solid var(--line);padding-block:48px;color:var(--dim);font
 <footer>
   <div class="wrap foot">
     <div>© 2026 Audiskope contributors · <a href="https://github.com/kmelitzanis/audiskope/blob/main/LICENSE">GPL-3.0-only</a></div>
-    <div class="foot-links">
-      <a href="https://github.com/kmelitzanis/audiskope">Source</a>
-      <a href="https://github.com/kmelitzanis/audiskope/releases">Releases</a>
-      <a href="https://github.com/kmelitzanis/audiskope/issues">Issues</a>
-      <a href="https://github.com/kmelitzanis/audiskope/blob/main/CHANGELOG.md">Changelog</a>
+    <div class="foot-right">
+      <div class="foot-links">
+        <a href="https://github.com/kmelitzanis/audiskope">Source</a>
+        <a href="https://github.com/kmelitzanis/audiskope/releases">Releases</a>
+        <a href="https://github.com/kmelitzanis/audiskope/issues">Issues</a>
+        <a href="https://github.com/kmelitzanis/audiskope/blob/main/CHANGELOG.md">Changelog</a>
+      </div>
+      <a class="bmc" href="https://buymeacoffee.com/kostasmel" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1.4 12.3A2 2 0 0 1 14.6 21H9.4a2 2 0 0 1-2-1.7L6 7Z" fill="#fff" stroke="#0f172a" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.2 12.5h9.6l-.7 6.6a1 1 0 0 1-1 .9H8.9a1 1 0 0 1-1-.9l-.7-6.6Z" fill="#f59e0b" opacity=".9"/><path d="M5 5.2h14V7H5z" fill="#fff" stroke="#0f172a" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 3h8l1 2.2H7L8 3Z" fill="#fff" stroke="#0f172a" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Buy me a coffee</span></a>
     </div>
   </div>
 </footer>
